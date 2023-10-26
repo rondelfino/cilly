@@ -68,4 +68,9 @@ void chip_8_load_rom(chip_8 *chip_8, const char *filename);
 
 void chip_8_load_font(chip_8 *chip_8);
 
+void chip_8_execute_instruction(chip_8 *chip_8);
+
+void chip_8_instruction_cycle(chip_8 *chip_8);
+
+
 #endif // !CHIP_8_H

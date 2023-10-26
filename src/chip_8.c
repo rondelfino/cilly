@@ -1,7 +1,5 @@
 #include "chip_8.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 void chip_8_init(chip_8 *chip_8, uint16_t pc_start_address)
 {
@@ -80,4 +78,34 @@ void chip_8_load_font(chip_8 *chip_8)
     {
         chip_8->memory[FONT_START_ADDR + i] = fontset[i];
     }
+}
+
+void chip_8_instruction_cycle(chip_8 *chip_8)
+{
+    /* fetch instruction */
+    uint16_t opcode = chip_8->memory[chip_8->PC];
+    opcode <<= 8;
+    opcode |= chip_8->memory[chip_8->PC + 1];
+    chip_8->PC += 2;
+    printf("opcode: 0x%x\n", opcode);
+
+    /* first nibble*/
+    uint8_t first_nibble = (opcode >> 12) & 0xF;
+    printf("first_nibble: 0x%x\n", first_nibble);
+    /* second nibble*/
+    uint8_t x = (opcode >> 8) & 0xF;
+    printf("x: 0x%x\n", x);
+    /* third nibble*/
+    uint8_t y = (opcode >> 4) & 0xF;
+    printf("y: 0x%x\n", y);
+    /* fourth nibble */
+    uint8_t n = opcode & 0xF;
+    printf("n: 0x%x\n", n);
+    /* third and fourth nibbles*/
+    uint8_t nn = y << 4 | n;
+    printf("nn: 0x%x\n", nn);
+    /* second, third, and fourth nibbles */
+    uint16_t nnn = x << 8 | y << 4 | n;
+    printf("nnn: 0x%x\n", nnn);
+
 }
