@@ -38,7 +38,7 @@ struct chip8
 
     /*
      * stack
-     * pushes PC when subroutine is called
+     * pushes PC when subroutine (function) is called
      * popped when it returns
      */
     uint16_t stack[STACK_SIZE];
@@ -108,7 +108,7 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename);
 void chip8_load_fontset(struct chip8 *chip8);
 
 /* idk if i should make this */
-void chip8_fetch_opcode(struct chip8 *chip8);
+uint16_t chip8_fetch_opcode(struct chip8 chip8);
 
 void chip8_decode_and_execute(struct chip8 *chip8, opcode_fn opcode_table);
 
@@ -119,13 +119,13 @@ void chip8_cycle(struct chip8 *chip8);
 
 /* opcode functions */
 /* handles opcodes starting with 0 */
-void chip8_table0(struct chip8 *chip8);
+void table0(struct chip8 *chip8);
 /* handles opcodes starting with 8 */
-void chip8_table8(struct chip8 *chip8);
+void table8(struct chip8 *chip8);
 /* handles opcodes starting with E */
-void chip8_tableE(struct chip8 *chip8);
+void tableE(struct chip8 *chip8);
 /* handles opcodes starting with F */
-void chip8_tableF(struct chip8 *chip8);
+void tableF(struct chip8 *chip8);
 
 void op_1NNN();
 void op_2NNN();

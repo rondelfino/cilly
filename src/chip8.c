@@ -1,4 +1,5 @@
 #include "chip8.h"
+#include <stdint.h>
 #include <stdio.h>
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
@@ -6,7 +7,7 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->PC = pc_start_address;
 
     /* Setup function pointer tables */
-    chip8->main_table[0x0] = chip8_table0;
+    chip8->main_table[0x0] = table0;
     chip8->main_table[0x1] = op_1NNN;
     chip8->main_table[0x2] = op_2NNN;
     chip8->main_table[0x3] = op_3XNN;
@@ -14,17 +15,17 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->main_table[0x5] = op_5XY0;
     chip8->main_table[0x6] = op_6XNN;
     chip8->main_table[0x7] = op_7XNN;
-    chip8->main_table[0x8] = chip8_table8;
+    chip8->main_table[0x8] = table8;
     chip8->main_table[0x9] = op_9XY0;
     chip8->main_table[0xA] = op_ANNN;
     chip8->main_table[0xB] = op_BNNN;
     chip8->main_table[0xC] = op_CXNN;
     chip8->main_table[0xD] = op_DXYN;
-    chip8->main_table[0xE] = chip8_tableE;
-    chip8->main_table[0xF] = chip8_tableF;
+    chip8->main_table[0xE] = tableE;
+    chip8->main_table[0xF] = tableF;
 
     chip8->table0[0x0] = op_00E0;
-    chip8->table0[0xE] - op_00EE;
+    chip8->table0[0xE] = op_00EE;
 
     chip8->table8[0x0] = op_8XY0;
     chip8->table8[0x1] = op_8XY1;
@@ -94,12 +95,6 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
     }
 }
 
-/* opcode function tables */
-void chip8_table0(struct chip8 *chip8)
-{
-    chip8->table0[chip8->n]();
-}
-
 void chip8_load_fontset(struct chip8 *chip8)
 {
     /*
@@ -137,37 +132,40 @@ void chip8_load_fontset(struct chip8 *chip8)
     }
 }
 
-
-void chip8_fetch_opcode(struct chip8 *chip8)
+uint16_t chip8_fetch_opcode(struct chip8 chip8)
 {
-    /* fetch instruction */
-    chip8->opcode = chip8->memory[chip8->PC];
-    ochip8->pcode <<= 8;
-    ochip8->pcode |= chip8->memory[chip8->PC + 1];
+    uint16_t opcode = chip8.memory[chip8.PC];
+    opcode <<= 8;
+    opcode |= chip8.memory[chip8.PC + 1];
+
+    return opcode;
 }
 
-void chip8_decode(struct chip8)
-{
-}
+// void chip8_decode(struct chip8 *chip8)
+// {
+// }
 
 void chip8_cycle(struct chip8 *chip8)
 {
-    chip8->opcode = chip8_fetch_opcode(chip8);
+   
+    /* fetch instruction */
+    uint16_t opcode = chip8_fetch_opcode(*chip8);
+
     /* point to next opcode */
     chip8->PC += 2;
-    printf("opcode: 0x%x\n", chip8->opcode);
+    printf("opcode: 0x%x\n", opcode);
 
     /* first nibble */
-    uint8_t opcode_id = (chip8->opcode >> 12) & 0xF;
+    uint8_t opcode_id = (opcode >> 12) & 0xF;
     printf("first_nibble: 0x%x\n", opcode_id);
     /* second nibble*/
-    chip8->x = (chip8->opcode >> 8) & 0xF;
+    chip8->x = (opcode >> 8) & 0xF;
     printf("x: 0x%x\n", chip8->x);
     /* third nibble*/
-    chip8->y = (chip8->opcode >> 4) & 0xF;
+    chip8->y = (opcode >> 4) & 0xF;
     printf("y: 0x%x\n", chip8->y);
     /* fourth nibble */
-    chip8->n = chip8->opcode & 0xF;
+    chip8->n = opcode & 0xF;
     printf("n: 0x%x\n", chip8->n);
     /* third and fourth nibbles*/
     chip8->nn = chip8->y << 4 | chip8->n;
@@ -188,4 +186,127 @@ void chip8_cycle(struct chip8 *chip8)
         printf("BEEP!\n");
         chip8->sound_timer--;
     }
+}
+
+/* opcode function tables */
+void table0(struct chip8 *chip8)
+{
+    chip8->table0[chip8->n]();
+}
+
+void table8(struct chip8 *chip8)
+{
+}
+void tableE(struct chip8 *chip8)
+{
+}
+void tableF(struct chip8 *chip8)
+{
+}
+
+/* opcodes */
+void op_1NNN()
+{
+}
+void op_2NNN()
+{
+}
+void op_3XNN()
+{
+}
+void op_4XNN()
+{
+}
+void op_5XY0()
+{
+}
+void op_6XNN()
+{
+}
+void op_7XNN()
+{
+}
+void op_9XY0()
+{
+}
+void op_ANNN()
+{
+}
+void op_BNNN()
+{
+}
+void op_CXNN()
+{
+}
+void op_DXYN()
+{
+}
+
+void op_00E0()
+{
+}
+void op_00EE()
+{
+}
+void op_8XY0()
+{
+}
+void op_8XY1()
+{
+}
+void op_8XY2()
+{
+}
+void op_8XY3()
+{
+}
+void op_8XY4()
+{
+}
+void op_8XY5()
+{
+}
+void op_8XY6()
+{
+}
+void op_8XY7()
+{
+}
+void op_8XYE()
+{
+}
+
+void op_EXA1()
+{
+}
+void op_EX9E()
+{
+}
+
+void op_FX07()
+{
+}
+void op_FX0A()
+{
+}
+void op_FX15()
+{
+}
+void op_FX18()
+{
+}
+void op_FX1E()
+{
+}
+void op_FX29()
+{
+}
+void op_FX33()
+{
+}
+void op_FX55()
+{
+}
+void op_FX65()
+{
 }
