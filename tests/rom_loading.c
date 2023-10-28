@@ -10,6 +10,8 @@ int main(int argc, char **argv) {
   // printf("PC: 0x%x 0x%x\n", chip8->PC, chip8->memory[chip8->PC]);
   chip8_cycle(&chip8);
   printf("PC: 0x%x\n", chip8.PC);
+  chip8.SP = chip8.stack[0];
+  printf("SP: 0x%x Stack[0]: 0x%x\n", chip8.SP, chip8.stack[0]);
 
   
 

@@ -1,10 +1,14 @@
 #include "chip8.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
     chip8->PC = pc_start_address;
+    memset(chip8->stack, 0, STACK_SIZE);
+    chip8->I = 0x0;
 
     /* Setup function pointer tables */
     chip8->main_table[0x0] = table0;
@@ -40,8 +44,8 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->tableE[0x1] = op_EXA1;
     chip8->tableE[0xE] = op_EX9E;
 
-    chip8->tableF[0x7] = op_FX07;
-    chip8->tableF[0xA] = op_FX0A;
+    chip8->tableF[0x07] = op_FX07;
+    chip8->tableF[0x0A] = op_FX0A;
     chip8->tableF[0x15] = op_FX15;
     chip8->tableF[0x18] = op_FX18;
     chip8->tableF[0x1E] = op_FX1E;
@@ -132,49 +136,39 @@ void chip8_load_fontset(struct chip8 *chip8)
     }
 }
 
-uint16_t chip8_fetch_opcode(struct chip8 chip8)
-{
-    uint16_t opcode = chip8.memory[chip8.PC];
-    opcode <<= 8;
-    opcode |= chip8.memory[chip8.PC + 1];
-
-    return opcode;
-}
-
-// void chip8_decode(struct chip8 *chip8)
-// {
-// }
-
 void chip8_cycle(struct chip8 *chip8)
 {
-   
-    /* fetch instruction */
-    uint16_t opcode = chip8_fetch_opcode(*chip8);
 
-    /* point to next opcode */
+    /* fetch instruction */
+    chip8->opcode = chip8->memory[chip8->PC];
+    chip8->opcode <<= 8;
+    chip8->opcode |= chip8->memory[chip8->PC + 1];
+
+    /* point to next chip8->opcode */
     chip8->PC += 2;
-    printf("opcode: 0x%x\n", opcode);
+    printf("chip8->opcode: 0x%x\n", chip8->opcode);
 
     /* first nibble */
-    uint8_t opcode_id = (opcode >> 12) & 0xF;
+    uint8_t opcode_id = (chip8->opcode >> 12) & 0xF;
     printf("first_nibble: 0x%x\n", opcode_id);
     /* second nibble*/
-    chip8->x = (opcode >> 8) & 0xF;
+    chip8->x = (chip8->opcode >> 8) & 0xF;
     printf("x: 0x%x\n", chip8->x);
     /* third nibble*/
-    chip8->y = (opcode >> 4) & 0xF;
+    chip8->y = (chip8->opcode >> 4) & 0xF;
     printf("y: 0x%x\n", chip8->y);
     /* fourth nibble */
-    chip8->n = opcode & 0xF;
+    chip8->n = chip8->opcode & 0xF;
     printf("n: 0x%x\n", chip8->n);
     /* third and fourth nibbles*/
-    chip8->nn = chip8->y << 4 | chip8->n;
+    chip8->nn = chip8->opcode & 0xFF;
     printf("nn: 0x%x\n", chip8->nn);
     /* second, third, and fourth nibbles */
-    chip8->nnn = chip8->x << 8 | chip8->y << 4 | chip8->n;
-    printf("nnn: 0x%x\n", chip8->nnn);
+    uint16_t nnn = chip8->opcode & 0xFFF;
+    printf("nnn: 0x%x\n", nnn);
 
     /* decode */
+    chip8->main_table[opcode_id]();
     /* handle stuff */
 
     // Decrement by 1 60 times per second
@@ -188,125 +182,280 @@ void chip8_cycle(struct chip8 *chip8)
     }
 }
 
-/* opcode function tables */
+void chip8_clear_display(struct chip8 *chip8)
+{
+    for (size_t i = 0; i < DISPLAY_WIDTH; i++)
+    {
+        for (size_t j = 0; j < DISPLAY_HEIGHT; j++)
+        {
+            chip8->display[i][j] = 0;
+        }
+    }
+}
+
+/* chip8->opcode function tables */
 void table0(struct chip8 *chip8)
 {
-    chip8->table0[chip8->n]();
+    /* index into table using fourth nibble */
+    chip8->table0[chip8->opcode & 0xF]();
 }
 
 void table8(struct chip8 *chip8)
 {
+    chip8->table8[chip8->opcode & 0xF]();
 }
+
 void tableE(struct chip8 *chip8)
 {
+    chip8->tableE[chip8->opcode & 0xF]();
 }
 void tableF(struct chip8 *chip8)
 {
+    /* index into table using 3rd, 4th nibble */
+    chip8->tableF[chip8->opcode & 0xFF]();
 }
 
-/* opcodes */
-void op_1NNN()
+/* chip8->opcodes */
+void op_1NNN(struct chip8 *chip8)
+{
+    /* jumps (sets PC) to memory address NNN */
+    uint16_t address = chip8->opcode & 0xFFF;
+    chip8->PC = address;
+}
+void op_2NNN(struct chip8 *chip8)
+{
+    /* calls subroutine at memory location NNN */
+    uint16_t address = chip8->opcode & 0xFFF;
+    chip8->stack[chip8->SP++] = chip8->PC;
+    chip8->PC = address;
+}
+void op_3XNN(struct chip8 *chip8)
+{
+    /* skip instruction if value of register V[X] == NN
+    (PC += 2),
+    or do nothing*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t nn = chip8->opcode & 0xFF;
+
+    if (chip8->V[x] == nn)
+        chip8->PC += 2;
+}
+void op_4XNN(struct chip8 *chip8)
+{
+    /* skip instruction if value of register V[X] == NN
+    (PC += 2),
+    or do nothing*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t nn = chip8->opcode & 0xFF;
+
+    if (chip8->V[x] == nn)
+        chip8->PC += 2;
+}
+void op_5XY0(struct chip8 *chip8)
+{
+    /* skip instruction if value of register V[X] == V[Y]
+    (PC += 2),
+    or do nothing*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    if (chip8->V[x] == chip8->V[y])
+        chip8->PC += 2;
+}
+void op_6XNN(struct chip8 *chip8)
+{
+    /* sets V[x] to NN */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t nn = chip8->opcode & 0xFF;
+
+    chip8->V[x] = nn;
+}
+void op_7XNN(struct chip8 *chip8)
+{
+    /* adds nn to V[x] */
+    uint8_t nn = chip8->opcode & 0xFF;
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    chip8->V[x] += nn;
+}
+void op_9XY0(struct chip8 *chip8)
 {
 }
-void op_2NNN()
+void op_ANNN(struct chip8 *chip8)
+{
+    /* Sets the index register, I, to NNN */
+    uint16_t nnn = chip8->opcode & 0xFFF;
+
+    chip8->I = nnn; 
+}
+void op_BNNN(struct chip8 *chip8)
+{
+    
+}
+void op_CXNN(struct chip8 *chip8)
 {
 }
-void op_3XNN()
-{
-}
-void op_4XNN()
-{
-}
-void op_5XY0()
-{
-}
-void op_6XNN()
-{
-}
-void op_7XNN()
-{
-}
-void op_9XY0()
-{
-}
-void op_ANNN()
-{
-}
-void op_BNNN()
-{
-}
-void op_CXNN()
-{
-}
-void op_DXYN()
+void op_DXYN(struct chip8 *chip8)
 {
 }
 
-void op_00E0()
+void op_00E0(struct chip8 *chip8)
+{
+    chip8_clear_display(chip8);
+}
+void op_00EE(struct chip8 *chip8)
+{
+    /* returns from subroutine */
+    chip8->SP--;
+    chip8->stack[chip8->SP] = chip8->PC;
+}
+
+void op_8XY0(struct chip8 *chip8)
+{
+    /* set V[x] to V[y]*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    chip8->V[x] = chip8->V[y];
+}
+void op_8XY1(struct chip8 *chip8)
+{
+    /* set V[X] to V[X] | V[Y]*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    chip8->V[x] |= chip8->V[y];
+}
+void op_8XY2(struct chip8 *chip8)
+{
+    /* set V[X] to V[X] & V[Y]*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    chip8->V[x] &= chip8->V[y];
+}
+void op_8XY3(struct chip8 *chip8)
+{
+    /* set V[X] to V[X] ^ V[Y]*/
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    chip8->V[x] ^= chip8->V[y];
+}
+void op_8XY4(struct chip8 *chip8)
+{
+    /*
+        set V[X] to V[X] + V[Y]
+        if it overflows (255) set V[F] to 1
+        otherwise set V[F] to 0
+    */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    uint16_t sum = chip8->V[x] + chip8->V[y];
+    chip8->V[REGISTER_COUNT - 1] = (sum > 0xFF) ? 1 : 0;
+    /* cap at 0xFF (255) */
+    chip8->V[x] = sum & 0xFF;
+}
+void op_8XY5(struct chip8 *chip8)
+{
+    /*
+        set V[X] to V[X] - V[Y]
+        if it undeflows set V[F] to 0
+        otherwise set V[F] to 1
+    */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+    chip8->V[REGISTER_COUNT - 1] = (chip8->V[x] > chip8->V[y]) ? 1 : 0;
+
+    chip8->V[x] -= chip8->V[y];
+}
+void op_8XY6(struct chip8 *chip8)
+{
+    /*
+        Changes depending on interpreter
+        COSMAC-VIP: set V[X] to V[Y]
+        All other interpreters: don't set V[X] to V[Y]
+
+        Shift the value of V[X] one bit to the right
+        Set V[F] to 1 if that bit was 1
+                    0 if that bit was 0
+     */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    /* COSMAC-VIP */
+    /* TODO(nael): support legacy config/quirks */
+    chip8->V[x] = chip8->V[y];
+
+    chip8->V[REGISTER_COUNT - 1] = chip8->V[x] & 0x1;
+    chip8->V[x] >>= 1;
+}
+void op_8XY7(struct chip8 *chip8)
+{
+    /*
+        Set V[X] to V[Y] - V[X]
+        If it undeflows set V[F] to 0,
+        otherwise set V[F] to 1
+    */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+    chip8->V[REGISTER_COUNT - 1] = (chip8->V[y] > chip8->V[x]) ? 1 : 0;
+
+    chip8->V[x] = chip8->V[y] - chip8->V[x];
+}
+void op_8XYE(struct chip8 *chip8)
+{
+    /*
+        Changes depending on interpreter
+        COSMAC-VIP: set V[X] to V[Y]
+        All other interpreters: don't set V[X] to V[Y]
+
+        Shift the value of V[X] one bit to the right
+        Set V[F] to 1 if that bit was 1
+                    0 if that bit was 0
+     */
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    /* COSMAC-VIP */
+    /* TODO(nael): support legacy config/quirks */
+    chip8->V[x] = chip8->V[y];
+
+    chip8->V[REGISTER_COUNT - 1] = (chip8->V[x] >> 12) & 0x1;
+    chip8->V[x] <<= 1;
+}
+void op_EXA1(struct chip8 *chip8)
 {
 }
-void op_00EE()
-{
-}
-void op_8XY0()
-{
-}
-void op_8XY1()
-{
-}
-void op_8XY2()
-{
-}
-void op_8XY3()
-{
-}
-void op_8XY4()
-{
-}
-void op_8XY5()
-{
-}
-void op_8XY6()
-{
-}
-void op_8XY7()
-{
-}
-void op_8XYE()
+void op_EX9E(struct chip8 *chip8)
 {
 }
 
-void op_EXA1()
+void op_FX07(struct chip8 *chip8)
 {
 }
-void op_EX9E()
+void op_FX0A(struct chip8 *chip8)
 {
 }
-
-void op_FX07()
+void op_FX15(struct chip8 *chip8)
 {
 }
-void op_FX0A()
+void op_FX18(struct chip8 *chip8)
 {
 }
-void op_FX15()
+void op_FX1E(struct chip8 *chip8)
 {
 }
-void op_FX18()
+void op_FX29(struct chip8 *chip8)
 {
 }
-void op_FX1E()
+void op_FX33(struct chip8 *chip8)
 {
 }
-void op_FX29()
+void op_FX55(struct chip8 *chip8)
 {
 }
-void op_FX33()
-{
-}
-void op_FX55()
-{
-}
-void op_FX65()
+void op_FX65(struct chip8 *chip8)
 {
 }

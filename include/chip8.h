@@ -107,14 +107,13 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename);
 
 void chip8_load_fontset(struct chip8 *chip8);
 
-/* idk if i should make this */
-uint16_t chip8_fetch_opcode(struct chip8 chip8);
-
-void chip8_decode_and_execute(struct chip8 *chip8, opcode_fn opcode_table);
+void chip8_decode_and_execute(struct chip8 *chip8, opcode_fn main_table);
 
 void chip8_execute_instruction(struct chip8 *chip8);
 
 void chip8_cycle(struct chip8 *chip8);
+
+void chip8_clear_display(struct chip8 *chip8);
 
 
 /* opcode functions */
@@ -127,42 +126,42 @@ void tableE(struct chip8 *chip8);
 /* handles opcodes starting with F */
 void tableF(struct chip8 *chip8);
 
-void op_1NNN();
-void op_2NNN();
-void op_3XNN();
-void op_4XNN();
-void op_5XY0();
-void op_6XNN();
-void op_7XNN();
-void op_9XY0();
-void op_ANNN();
-void op_BNNN();
-void op_CXNN();
-void op_DXYN();
+void op_1NNN(struct chip8 *chip8);
+void op_2NNN(struct chip8 *chip8);
+void op_3XNN(struct chip8 *chip8);
+void op_4XNN(struct chip8 *chip8);
+void op_5XY0(struct chip8 *chip8);
+void op_6XNN(struct chip8 *chip8);
+void op_7XNN(struct chip8 *chip8);
+void op_9XY0(struct chip8 *chip8);
+void op_ANNN(struct chip8 *chip8);
+void op_BNNN(struct chip8 *chip8);
+void op_CXNN(struct chip8 *chip8);
+void op_DXYN(struct chip8 *chip8);
 
-void op_00E0();
-void op_00EE();
-void op_8XY0();
-void op_8XY1();
-void op_8XY2();
-void op_8XY3();
-void op_8XY4();
-void op_8XY5();
-void op_8XY6();
-void op_8XY7();
-void op_8XYE();
+void op_00E0(struct chip8 *chip8);
+void op_00EE(struct chip8 *chip8);
+void op_8XY0(struct chip8 *chip8);
+void op_8XY1(struct chip8 *chip8);
+void op_8XY2(struct chip8 *chip8);
+void op_8XY3(struct chip8 *chip8);
+void op_8XY4(struct chip8 *chip8);
+void op_8XY5(struct chip8 *chip8);
+void op_8XY6(struct chip8 *chip8);
+void op_8XY7(struct chip8 *chip8);
+void op_8XYE(struct chip8 *chip8);
 
-void op_EXA1();
-void op_EX9E();
+void op_EXA1(struct chip8 *chip8);
+void op_EX9E(struct chip8 *chip8);
 
-void op_FX07();
-void op_FX0A();
-void op_FX15();
-void op_FX18();
-void op_FX1E();
-void op_FX29();
-void op_FX33();
-void op_FX55();
-void op_FX65();
+void op_FX07(struct chip8 *chip8);
+void op_FX0A(struct chip8 *chip8);
+void op_FX15(struct chip8 *chip8);
+void op_FX18(struct chip8 *chip8);
+void op_FX1E(struct chip8 *chip8);
+void op_FX29(struct chip8 *chip8);
+void op_FX33(struct chip8 *chip8);
+void op_FX55(struct chip8 *chip8);
+void op_FX65(struct chip8 *chip8);
 
 #endif // !chip8_H
