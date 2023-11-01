@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef chip8_H
 #define chip8_H
 
@@ -93,14 +95,15 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address);
    @param filename Name or path of a compatible *.ch8 ROM */
 void chip8_load_rom(struct chip8 *chip8, const char *filename);
 
+/* Load default fontset to memory */
 void chip8_load_fontset(struct chip8 *chip8);
 
-void chip8_decode_and_execute_opcode(struct chip8 *chip8, opcode_func main_table);
+/* void chip8_decode_and_execute_opcode(struct chip8 *chip8, opcode_func main_table); */
 
-void chip8_execute_instruction(struct chip8 *chip8);
-
+/* CHIP8 instruction cycle. Also handle sound and delay timers. */
 void chip8_cycle(struct chip8 *chip8);
 
+/* Set all pixels on screen to 0 */
 void chip8_clear_display(struct chip8 *chip8);
 
 /* Opcode functions */

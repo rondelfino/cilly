@@ -6,9 +6,13 @@
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
+    /* Init chip8 fields:
+        Clear display
+        Clear stack
+        Clear registers V0-VF
+        Clear memory */
+    memset(chip8, 0, sizeof(struct chip8));
     chip8->PC = pc_start_address;
-    memset(chip8->stack, 0, STACK_SIZE);
-    chip8->I = 0;
 
     /* Init seed */
     srand(time(NULL));
@@ -58,11 +62,6 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->tableF[0x55] = op_FX55;
     chip8->tableF[0x65] = op_FX65;
 
-    // Clear display
-    // Clear stack
-    // Clear registers V0-VF
-    // Clear memory
-
     chip8_load_fontset(chip8);
 }
 
@@ -105,16 +104,14 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
 
 void chip8_load_fontset(struct chip8 *chip8)
 {
-    /*
-    Represents hex characters as 5x4 sprites
+    /* Represents hex characters as 5x4 sprites
     Each byte represents a row for its repsective hex character
       F:
       11110000
       10000000
       11110000
       10000000
-      10000000
-    */
+      10000000 */
     uint8_t fontset[] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -134,7 +131,7 @@ void chip8_load_fontset(struct chip8 *chip8)
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    for (int i = 0; i <= sizeof(fontset); i++)
+    for (uint8_t i = 0; i < sizeof(fontset); i++)
     {
         chip8->memory[FONT_START_ADDR + i] = fontset[i];
     }
@@ -142,40 +139,18 @@ void chip8_load_fontset(struct chip8 *chip8)
 
 void chip8_cycle(struct chip8 *chip8)
 {
-
-    /* fetch instruction */
+    /* Fetch opcode */
     chip8->opcode = chip8->memory[chip8->PC];
     chip8->opcode <<= 8;
     chip8->opcode |= chip8->memory[chip8->PC + 1];
 
-    /* point to next chip8->opcode */
+    /* Point to next opcode */
     chip8->PC += 2;
-    printf("chip8->opcode: 0x%x\n", chip8->opcode);
 
-    /* first nibble */
-    uint8_t opcode_id = (chip8->opcode >> 12) & 0xF;
-    printf("first_nibble: 0x%x\n", opcode_id);
-    /* second nibble*/
-    chip8->x = (chip8->opcode >> 8) & 0xF;
-    printf("x: 0x%x\n", chip8->x);
-    /* third nibble*/
-    chip8->y = (chip8->opcode >> 4) & 0xF;
-    printf("y: 0x%x\n", chip8->y);
-    /* fourth nibble */
-    chip8->n = chip8->opcode & 0xF;
-    printf("n: 0x%x\n", chip8->n);
-    /* third and fourth nibbles*/
-    chip8->nn = chip8->opcode & 0xFF;
-    printf("nn: 0x%x\n", chip8->nn);
-    /* second, third, and fourth nibbles */
-    uint16_t nnn = chip8->opcode & 0xFFF;
-    printf("nnn: 0x%x\n", nnn);
+    /* Decode and execute */
+    chip8->main_table[(chip8->opcode >> 12) & 0xF]();
 
-    /* decode */
-    chip8->main_table[opcode_id]();
-    /* handle stuff */
-
-    // Decrement by 1 60 times per second
+    // Decrement by 1, 60 times per second
     if (chip8->delay_timer > 0)
         chip8->delay_timer--;
 
@@ -188,11 +163,5 @@ void chip8_cycle(struct chip8 *chip8)
 
 void chip8_clear_display(struct chip8 *chip8)
 {
-    for (size_t i = 0; i < DISPLAY_WIDTH; i++)
-    {
-        for (size_t j = 0; j < DISPLAY_HEIGHT; j++)
-        {
-            chip8->display[i][j] = 0;
-        }
-    }
+    memset(chip8->display, 0, sizeof(chip8->display));
 }

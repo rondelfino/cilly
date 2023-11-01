@@ -1,7 +1,8 @@
-#include "chip8.c"
+#include "chip8.h"
 #include <stdint.h>
+#include <stdlib.h>
 
-/* chip8->opcode function tables */
+/* Opcode function tables */
 void table0(struct chip8 *chip8)
 {
     /* Index into table using fourth nibble */
@@ -23,7 +24,7 @@ void tableF(struct chip8 *chip8)
     chip8->tableF[chip8->opcode & 0xFF]();
 }
 
-/* chip8->opcodes */
+/* Opcodes */
 void op_1NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
@@ -108,6 +109,7 @@ void op_DXYN(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
     uint8_t n = chip8->opcode & 0xF;
 
+    /* Cap at max width and height to prevent drawing out of bounds */
     uint8_t x_pos = chip8->V[x] % DISPLAY_WIDTH;
     uint8_t y_pos = chip8->V[y] % DISPLAY_HEIGHT;
 
@@ -115,21 +117,28 @@ void op_DXYN(struct chip8 *chip8)
 
     for (size_t row = 0; row < n; row++)
     {
-        uint16_t sprite_data = chip8->memory[chip8->I + row];
+        /* If bottom edge is reached stop drawing this column */
+        if (x_pos + row >= DISPLAY_WIDTH)
+            break;
+
+        uint8_t sprite_byte = chip8->memory[chip8->I + row];
         for (size_t col = 0; col < 8; col++)
         {
-            uint8_t sprite_pixel = (sprite_data >> (8 - col - 1)) & 0xF;
-            uint8_t *display_pixel = &chip8->display[x_pos][y_pos];
+            uint8_t sprite_pixel = (sprite_byte >> (8 - col - 1)) & 0xF;
+            uint8_t *display_pixel = &chip8->display[y_pos + row][x_pos + col];
+
+            /* If right edge is reached stop drawing this row */
+            if (x_pos + col >= DISPLAY_HEIGHT)
+                break;
 
             /* Collision */
-            if (sprite_pixel && display_pixel == ON)
-                chip8->V[REGISTER_COUNT - 1] = 0x1;
-            else if (sprite_pixel)
-                *display_pixel = ON;
-            /* If right edge is reached stop drawing this row */
-            x++;
+            if (sprite_pixel)
+            {
+                if (*display_pixel)
+                    chip8->V[REGISTER_COUNT - 1] = 1;
+            }
+            *display_pixel ^= 1;
         }
-        y++;
     }
 }
 
@@ -193,15 +202,6 @@ void op_8XY5(struct chip8 *chip8)
 }
 void op_8XY6(struct chip8 *chip8)
 {
-    /*
-        Changes depending on interpreter
-        COSMAC-VIP: set V[X] to V[Y]
-        All other interpreters: don't set V[X] to V[Y]
-
-        Shift the value of V[X] one bit to the right
-        Set V[F] to 1 if that bit was 1
-                    0 if that bit was 0
-     */
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t y = (chip8->opcode >> 4) & 0xF;
 
@@ -214,11 +214,6 @@ void op_8XY6(struct chip8 *chip8)
 }
 void op_8XY7(struct chip8 *chip8)
 {
-    /*
-        Set V[X] to V[Y] - V[X]
-        If it undeflows set V[F] to 0,
-        otherwise set V[F] to 1
-    */
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t y = (chip8->opcode >> 4) & 0xF;
     chip8->V[REGISTER_COUNT - 1] = (chip8->V[y] > chip8->V[x]) ? 1 : 0;
@@ -237,37 +232,165 @@ void op_8XYE(struct chip8 *chip8)
     chip8->V[REGISTER_COUNT - 1] = (chip8->V[x] >> 12) & 0x1;
     chip8->V[x] <<= 1;
 }
+
 void op_EXA1(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t key = chip8->V[x];
+
+    if (!chip8->keypad[key])
+        chip8->PC += 2;
 }
 void op_EX9E(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t key = chip8->V[x];
+
+    if (chip8->keypad[key])
+        chip8->PC += 2;
 }
 
 void op_FX07(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    chip8->V[x] = chip8->delay_timer;
 }
 void op_FX0A(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    if (chip8->keypad[0])
+    {
+        chip8->V[x] = 0x0;
+    }
+    else if (chip8->keypad[1])
+    {
+        chip8->V[x] = 0x1;
+    }
+    else if (chip8->keypad[2])
+    {
+        chip8->V[x] = 0x2;
+    }
+    else if (chip8->keypad[3])
+    {
+        chip8->V[x] = 0x3;
+    }
+    else if (chip8->keypad[4])
+    {
+        chip8->V[x] = 0x4;
+    }
+    else if (chip8->keypad[5])
+    {
+        chip8->V[x] = 0x5;
+    }
+    else if (chip8->keypad[6])
+    {
+        chip8->V[x] = 0x6;
+    }
+    else if (chip8->keypad[7])
+    {
+        chip8->V[x] = 0x7;
+    }
+    else if (chip8->keypad[8])
+    {
+        chip8->V[x] = 0x8;
+    }
+    else if (chip8->keypad[9])
+    {
+        chip8->V[x] = 0x9;
+    }
+    else if (chip8->keypad[10])
+    {
+        chip8->V[x] = 0xA;
+    }
+    else if (chip8->keypad[11])
+    {
+        chip8->V[x] = 0xB;
+    }
+    else if (chip8->keypad[11])
+    {
+        chip8->V[x] = 0xC;
+    }
+    else if (chip8->keypad[11])
+    {
+        chip8->V[x] = 0xD;
+    }
+    else if (chip8->keypad[11])
+    {
+        chip8->V[x] = 0xE;
+    }
+    else if (chip8->keypad[11])
+    {
+        chip8->V[x] = 0xF;
+    }
+    else
+    {
+        chip8->PC -= 2;
+    }
 }
 void op_FX15(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    chip8->delay_timer = chip8->V[x];
 }
 void op_FX18(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    chip8->sound_timer = chip8->V[x];
 }
 void op_FX1E(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    chip8->I += chip8->V[x];
 }
 void op_FX29(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    /* Hexadecimal digit in V[X] */
+    uint8_t digit = chip8->V[x];
+
+    /* Set I to the memory address of the digit */
+    /* 5 is the size of a row in the fontset */
+    chip8->I = FONT_START_ADDR + (5 * digit);
 }
 void op_FX33(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t value = chip8->V[x];
+
+    size_t i_counter = 0;
+    while (value > 0)
+    {
+        uint8_t digit = value % 10;
+        chip8->memory[chip8->I + i_counter++] = digit;
+        value /= 10;
+    }
 }
 void op_FX55(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    for (size_t i = 0; i <= x; i++)
+    {
+        chip8->memory[chip8->I + i] = chip8->V[i];
+    }
+    /* TODO(nael): support legacy config/quirks */
+    /* COSMAC-VIP specific */
+    /* chip8->I += x + 1; */
 }
 void op_FX65(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+
+    for (size_t i = 0; i <= x; i++)
+    {
+        chip8->V[i] = chip8->memory[chip8->I + i];
+    }
+    /* TODO(nael): support legacy config/quirks */
+    /* COSMAC-VIP specific */
+    /* chip8->I += x + 1; */
 }
