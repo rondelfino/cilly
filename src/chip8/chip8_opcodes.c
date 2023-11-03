@@ -49,7 +49,7 @@ void op_4XNN(struct chip8 *chip8)
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t nn = chip8->opcode & 0xFF;
 
-    if (chip8->V[x] == nn)
+    if (chip8->V[x] != nn)
         chip8->PC += 2;
 }
 void op_5XY0(struct chip8 *chip8)
@@ -76,6 +76,11 @@ void op_7XNN(struct chip8 *chip8)
 }
 void op_9XY0(struct chip8 *chip8)
 {
+    uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t y = (chip8->opcode >> 4) & 0xF;
+
+    if (chip8->V[x] != chip8->V[y])
+        chip8->PC += 2;
 }
 void op_ANNN(struct chip8 *chip8)
 {
@@ -134,10 +139,10 @@ void op_DXYN(struct chip8 *chip8)
             /* Collision */
             if (sprite_pixel)
             {
-                if (*display_pixel)
+                if (*display_pixel == 0xFF)
                     chip8->V[REGISTER_COUNT - 1] = 1;
             }
-            *display_pixel ^= 1;
+            *display_pixel ^= 0xFF;
         }
     }
 }
@@ -149,7 +154,7 @@ void op_00E0(struct chip8 *chip8)
 void op_00EE(struct chip8 *chip8)
 {
     chip8->SP--;
-    chip8->stack[chip8->SP] = chip8->PC;
+    chip8->PC = chip8->stack[chip8->SP];
 }
 
 void op_8XY0(struct chip8 *chip8)
@@ -187,7 +192,7 @@ void op_8XY4(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
 
     uint16_t sum = chip8->V[x] + chip8->V[y];
-    chip8->V[REGISTER_COUNT - 1] = (sum > 0xFF) ? 1 : 0;
+    chip8->V[0xF] = (sum > 0xFF) ? 1 : 0;
     /* cap at 0xFF (255) */
     chip8->V[x] = sum & 0xFF;
 }
@@ -223,7 +228,7 @@ void op_8XY7(struct chip8 *chip8)
 void op_8XYE(struct chip8 *chip8)
 {
     uint8_t x = (chip8->opcode >> 8) & 0xF;
-    uint8_t y = (chip8->opcode >> 4) & 0xF;
+    // uint8_t y = (chip8->opcode >> 4) & 0xF;
 
     /* COSMAC-VIP */
     /* TODO(nael): support legacy config/quirks */
@@ -362,13 +367,20 @@ void op_FX33(struct chip8 *chip8)
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t value = chip8->V[x];
 
-    size_t i_counter = 0;
-    while (value > 0)
-    {
-        uint8_t digit = value % 10;
-        chip8->memory[chip8->I + i_counter++] = digit;
-        value /= 10;
-    }
+    chip8->memory[chip8->I + 2] = value % 10;
+    value /= 10;
+
+    chip8->memory[chip8->I + 1] = value % 10;
+    value /= 10;
+
+    chip8->memory[chip8->I] = value % 10;
+    // size_t i_counter = 2;
+    // while (value >= 0)
+    // {
+    //     uint8_t digit = value % 10;
+    //     chip8->memory[chip8->I + i_counter--] = digit;
+    //     value /= 10;
+    // }
 }
 void op_FX55(struct chip8 *chip8)
 {
