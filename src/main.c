@@ -1,7 +1,10 @@
 #include "chip8.h"
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <bits/time.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define KEY_ESCAPE 9
 #define KEY_1 10
@@ -26,15 +29,11 @@
 
 int main(int argc, char **argv)
 {
-    struct chip8 chip8;
-    chip8_init(&chip8, 0x200);
-
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy)
     {
         return -1;
     }
-
     uint32_t scr = DefaultScreen(dpy);
 
     uint32_t black = BlackPixel(dpy, scr);
@@ -49,7 +48,20 @@ int main(int argc, char **argv)
 
     XSetForeground(dpy, gc, white);
 
-    unsigned char running = 1;
+    if (argc != 3)
+        printf("Usage: <ROM> <CPU clock>");
+
+    const char *filename = argv[1];
+    uint8_t cpu_clock = atoi(argv[2]);
+
+    struct chip8 chip8;
+    chip8_init(&chip8, 0x200);
+    chip8_load_rom(&chip8, filename);
+
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+    uint8_t running = 1;
     while (running)
     {
         XEvent event;
@@ -211,6 +223,20 @@ int main(int argc, char **argv)
                 }
             }
         }
+        struct timespec new_time;
+        clock_gettime(CLOCK_MONOTONIC, &new_time);
+
+        float dt = (new_time.tv_sec - current_time.tv_sec) + (new_time.tv_nsec - current_time.tv_nsec) / 1e9;
+
+        if (dt > cpu_clock)
+        {
+            printf("%f\n", dt);
+            current_time = new_time;
+
+            chip8_cycle(&chip8, dt);
+        }
     }
+    XFreeGC(dpy, gc);
+    XDestroyWindow(dpy, window);
     XCloseDisplay(dpy);
 }
