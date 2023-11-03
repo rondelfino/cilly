@@ -23,4 +23,4 @@ target_link_libraries(cilly X11::X11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # compiler options
-# target_compile_options(cilly PRIVATE -Wall -Wextra)
+target_compile_options(cilly PRIVATE -Wall -Wextra -g3)
