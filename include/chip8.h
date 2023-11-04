@@ -27,7 +27,7 @@ struct chip8
        Default number of unique addresses is 2^12(4096) in a CHIP8 interpreter because it used 12-bit addressing */
     uint8_t memory[MAX_MEMORY];
 
-    uint8_t display[DISPLAY_HEIGHT][DISPLAY_WIDTH];
+    uint8_t display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 
     /* I register:
       Stores memory addresses to be used in operations */
@@ -43,9 +43,7 @@ struct chip8
     uint16_t stack[STACK_SIZE];
 
     /* Stack pointer:
-      Points to top of stack
-      Stores memory addresses that the interpreter should return to when finished with a
-      subroutine */
+      Points to top of stack */
     uint8_t SP;
 
     uint8_t delay_timer; /* Delay timer register */
@@ -61,9 +59,11 @@ struct chip8
         N -> fourth nibble. 4-bit number
         NN -> third and fourth nibbles (2nd byte). 8-bit immediate number
         NNN -> second, third, and fourth nibbles. 12-bit immediate memory address */
-    uint8_t x, y, n, nn, nnn;
+    // uint8_t x, y, n, nn, nnn;
 
     uint8_t keypad[KEY_COUNT];
+    /* Update screen */
+    uint8_t draw_flag;
 
     /*  Opcode function pointer tables
         the opcode id (the first nibble) indexes into the corresponding table
@@ -101,7 +101,7 @@ void chip8_load_fontset(struct chip8 *chip8);
 /* void chip8_decode_and_execute_opcode(struct chip8 *chip8, opcode_func main_table); */
 
 /* CHIP8 instruction cycle. Also handle sound and delay timers. */
-void chip8_cycle(struct chip8 *chip8);
+void chip8_cycle(struct chip8 *chip8, float dt);
 
 /* Set all pixels on screen to 0 */
 void chip8_clear_display(struct chip8 *chip8);
@@ -186,9 +186,11 @@ void op_8XY7(struct chip8 *chip8);
  * to the shift */
 void op_8XYE(struct chip8 *chip8);
 
-/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not pressed */
+/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not
+ * pressed */
 void op_EXA1(struct chip8 *chip8);
-/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed */
+/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
+ */
 void op_EX9E(struct chip8 *chip8);
 
 /* Store the current value of the delay timer in register VX */
@@ -205,10 +207,12 @@ void op_FX1E(struct chip8 *chip8);
 void op_FX29(struct chip8 *chip8);
 /* Store the binary-coded decimal equivalent of the value stored in register VX at addresses I, I+1, and I+2 */
 void op_FX33(struct chip8 *chip8);
-/* Store the values of registers V0 to VX inclusive in memory starting at address I. I is set to I + X + 1 after operation */
+/* Store the values of registers V0 to VX inclusive in memory starting at address I. I is set to I + X + 1 after
+ * operation */
 /* COSMAC-VIP: I gets set to I + X + 1 after storing the values in memory */
 void op_FX55(struct chip8 *chip8);
-/* Fill registers V0 to VX inclusive with the values stored in memory starting at address I. I is set to I + X + 1 after operation */
+/* Fill registers V0 to VX inclusive with the values stored in memory starting at address I. I is set to I + X + 1 after
+ * operation */
 /* COSMAC-VIP: I gets set to I + X + 1 after loading the values from memory */
 void op_FX65(struct chip8 *chip8);
 
