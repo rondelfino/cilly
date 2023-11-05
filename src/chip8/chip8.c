@@ -144,7 +144,7 @@ void chip8_load_fontset(struct chip8 *chip8)
     }
 }
 
-void chip8_cycle(struct chip8 *chip8, float dt)
+void chip8_cycle(struct chip8 *chip8)
 {
     /* Fetch opcode */
     chip8->opcode = chip8->memory[chip8->PC];

@@ -86,7 +86,7 @@ void chip8_load_fontset(struct chip8 *chip8);
 /* void chip8_decode_and_execute_opcode(struct chip8 *chip8, opcode_func main_table); */
 
 /* CHIP8 instruction cycle. Also handle sound and delay timers. */
-void chip8_cycle(struct chip8 *chip8, float dt);
+void chip8_cycle(struct chip8 *chip8);
 
 /* Set all pixels on screen to 0 */
 void chip8_clear_display(struct chip8 *chip8);
