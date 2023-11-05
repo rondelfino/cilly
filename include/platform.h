@@ -13,8 +13,8 @@ struct window
     GC gc;
     uint16_t scr;
     XEvent e;
-    uint16_t dpy_w;
-    uint16_t dpy_h;
+    uint16_t width;
+    uint16_t height;
     uint32_t black;
     uint32_t white;
 };

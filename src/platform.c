@@ -1,6 +1,5 @@
 #include "platform.h"
-#include <X11/X.h>
-#include <X11/Xlib.h>
+#include <math.h>
 #include <stdio.h>
 
 #define KEY_ESCAPE 9
@@ -48,13 +47,21 @@ void platform_create_window(struct window *window)
     /* Create window the size of half the screen */
     window->w = XCreateSimpleWindow(window->dpy, RootWindow(window->dpy, window->scr), window_x, window_y,
                                     screen_width / 2, screen_height / 2, 0, window->black, window->black);
+
+    XStoreName(window->dpy, window->w, "Cilly");
     XMapWindow(window->dpy, window->w);
 
     /* Events window will receive */
     XSelectInput(window->dpy, window->w,
-                 ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask);
+                 ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
+                     StructureNotifyMask);
 
     window->gc = XCreateGC(window->dpy, window->w, 0, NULL);
+    /* Get dimensions of window */
+    XWindowAttributes wa;
+    XGetWindowAttributes(window->dpy, window->w, &wa);
+    window->width = wa.width;
+    window->height = wa.height;
 }
 
 void platform_destroy_window(struct window *window)
@@ -196,15 +203,21 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
 void platform_update(struct window *window, uint8_t *display_buffer, uint16_t display_width, uint16_t display_height)
 {
     /* Get window attribute to scale sprites based on window size */
-    XWindowAttributes w_attributes;
-    XGetWindowAttributes(window->dpy, window->w, &w_attributes);
+    // XWindowAttributes wa;
+    // XGetWindowAttributes(window->dpy, window->w, &wa);
 
-    double x_scale = ((double)XDisplayWidth(window->dpy, window->scr) / 2) / display_width;
-    double y_scale = ((double)XDisplayHeight(window->dpy, window->scr) / 2) / display_height;
+    /* If window size changes get new dimensions */
+    // if (window->e.type == ConfigureNotify)
+    // {
+    //     window->width = wa.width;
+    //     window->height = wa.height;
+    // }
+    double x_scale = (double)window->width / display_width;
+    double y_scale = (double)window->height / display_height;
 
-    for (int y = 0; y < display_height; y++)
+    for (uint8_t y = 0; y < display_height; y++)
     {
-        for (int x = 0; x < display_width; x++)
+        for (uint8_t x = 0; x < display_width; x++)
         {
             if (display_buffer[y * display_width + x])
             {
@@ -214,12 +227,13 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint16_t di
             {
                 XSetForeground(window->dpy, window->gc, window->black);
             }
-            int x_scaled = (int)(x * x_scale);
-            int y_scaled = (int)(y * y_scale);
-            int width_scaled = (int)x_scale;
-            int height_scaled = (int)y_scale;
+            uint16_t x_scaled_pos = (uint16_t)(x * x_scale);
+            uint16_t y_scaled_pos = (uint16_t)(y * y_scale);
 
-            XFillRectangle(window->dpy, window->w, window->gc, x_scaled, y_scaled, width_scaled, height_scaled);
+            uint16_t rect_w = (uint16_t)(round((x + 1) * x_scale) - round(x_scaled_pos));
+            uint16_t rect_h = (uint16_t)(round((y + 1) * y_scale) - round(y_scaled_pos));
+
+            XFillRectangle(window->dpy, window->w, window->gc, x_scaled_pos, y_scaled_pos, rect_w, rect_h);
         }
     }
     XFlush(window->dpy);
