@@ -23,47 +23,32 @@ typedef void (*opcode_func)();
 /* State the CHIP8 machine */
 struct chip8
 {
-    /* Memory:
-       Default number of unique addresses is 2^12(4096) in a CHIP8 interpreter because it used 12-bit addressing */
+    /* Default number of unique addresses is 2^12(4096) in a CHIP8 interpreter because it used 12-bit addressing */
     uint8_t memory[MAX_MEMORY];
 
     uint8_t display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 
-    /* I register:
-      Stores memory addresses to be used in operations */
+    /* Index register :Store memory addresses to be used in operations */
     uint16_t I;
 
-    /* Program counter:
-      Holds the memory address for the next instruction */
+    /* Program counter: Hold the memory address for the next instruction */
     uint16_t PC;
 
-    /* Stack:
-      Pushes PC when subroutine (function) is called,
-      pops when it returns */
+    /* Push PC address when subroutine (function) is called,
+      pop when it returns */
     uint16_t stack[STACK_SIZE];
+    uint8_t SP; /* Point to top of stack */
 
-    /* Stack pointer:
-      Points to top of stack */
-    uint8_t SP;
-
-    uint8_t delay_timer; /* Delay timer register */
-    uint8_t sound_timer; /* Sound timer register */
+    uint8_t delay_timer;             /* Delay timer register */
+    uint8_t sound_timer;             /* Sound timer register */
 
     uint8_t V[REGISTER_COUNT]; /* General purpose registers: V0 -> VF */
 
-    uint16_t opcode; /* Entire opcode */
-
-    /* Nibbles */
-    /*  X -> second nibble used to lookup one of the registers VX (V0->VF)
-        Y -> third nibble used to lookup one of the registers VY (V0->VF)
-        N -> fourth nibble. 4-bit number
-        NN -> third and fourth nibbles (2nd byte). 8-bit immediate number
-        NNN -> second, third, and fourth nibbles. 12-bit immediate memory address */
-    // uint8_t x, y, n, nn, nnn;
+    uint16_t opcode; /* Current opcode to be decoded and executed */
 
     uint8_t keypad[KEY_COUNT];
-    /* Update screen */
-    uint8_t draw_flag;
+
+    uint8_t draw_flag; /* Update screen when not 0 */
 
     /*  Opcode function pointer tables
         the opcode id (the first nibble) indexes into the corresponding table
