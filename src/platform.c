@@ -85,7 +85,6 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
             break;
         case KEY_2:
             keypad[1] = 1;
-            printf("KEY_2\n");
             break;
         case KEY_3:
             keypad[2] = 1;
@@ -202,36 +201,36 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
 
 void platform_update(struct window *window, uint8_t *display_buffer, uint16_t display_width, uint16_t display_height)
 {
-    /* Get window attribute to scale sprites based on window size */
-    // XWindowAttributes wa;
-    // XGetWindowAttributes(window->dpy, window->w, &wa);
-
     /* If window size changes get new dimensions */
-    // if (window->e.type == ConfigureNotify)
-    // {
-    //     window->width = wa.width;
-    //     window->height = wa.height;
-    // }
-    double x_scale = (double)window->width / display_width;
-    double y_scale = (double)window->height / display_height;
+    if (window->e.type == ConfigureNotify || window->e.type == Expose)
+    {
+        /* Get window attribute to scale sprites based on window size */
+        XWindowAttributes wa;
+        XGetWindowAttributes(window->dpy, window->w, &wa);
+
+        window->width = wa.width;
+        window->height = wa.height;
+    }
+    uint16_t x_scale = window->width / display_width;
+    uint16_t y_scale = window->height / display_height;
+
+    /* Maintain 64:32 aspect ratio */
+    uint16_t min_scale = (x_scale < y_scale) ? x_scale : y_scale;
 
     for (uint8_t y = 0; y < display_height; y++)
     {
+        uint16_t y_scaled_pos = y * min_scale;
+        uint16_t rect_h = (y + 1) * min_scale - y_scaled_pos;
+
         for (uint8_t x = 0; x < display_width; x++)
         {
             if (display_buffer[y * display_width + x])
-            {
                 XSetForeground(window->dpy, window->gc, window->white);
-            }
             else
-            {
                 XSetForeground(window->dpy, window->gc, window->black);
-            }
-            uint16_t x_scaled_pos = (uint16_t)(x * x_scale);
-            uint16_t y_scaled_pos = (uint16_t)(y * y_scale);
 
-            uint16_t rect_w = (uint16_t)(round((x + 1) * x_scale) - round(x_scaled_pos));
-            uint16_t rect_h = (uint16_t)(round((y + 1) * y_scale) - round(y_scaled_pos));
+            uint16_t x_scaled_pos = x * min_scale;
+            uint16_t rect_w = (x + 1) * min_scale - x_scaled_pos;
 
             XFillRectangle(window->dpy, window->w, window->gc, x_scaled_pos, y_scaled_pos, rect_w, rect_h);
         }
