@@ -1,5 +1,4 @@
 #include "platform.h"
-#include <math.h>
 #include <stdio.h>
 
 #define KEY_ESCAPE 9
