@@ -114,34 +114,34 @@ void op_DXYN(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
     uint8_t n = chip8->opcode & 0xF;
 
+    /* Cap to the dimensions of the display buffer */
     uint8_t x_pos = chip8->V[x] % DISPLAY_WIDTH;
     uint8_t y_pos = chip8->V[y] % DISPLAY_HEIGHT;
 
     chip8->V[0xF] = 0;
-
+    /* Draw sprite from address in I to N */
     for (uint8_t row = 0; row < n; row++)
     {
+        /* Extract byte at current row */
         uint8_t sprite_byte = chip8->memory[chip8->I + row];
 
+        /* Iterate over extracted byte */
         for (uint8_t col = 0; col < 8; col++)
         {
+            /* Extract current bit */
             uint8_t sprite_pixel = (sprite_byte >> (8 - col - 1)) & 0x1;
+            /* Get current pixel value from display buffer */
             uint8_t *display_pixel = &chip8->display[(y_pos + row) * DISPLAY_WIDTH + (x_pos + col)];
 
-            // if (sprite_pixel && *display_pixel != 0x0)
-            // {
-            //     *display_pixel = 0x0;
-            //     chip8->V[0xF] = 1;
-            // }
-            // else if (sprite_pixel != 0x0 && *display_pixel == 0x0)
-            // {
-            //     *display_pixel = 0xFF;
-            // }
+            /* Extracted bit from sprite is set */
             if (sprite_pixel)
             {
+                /* Current pixel from display is set */
                 if (*display_pixel)
+                    /* Collision: set VF to 1 */
                     chip8->V[0xF] = 1;
 
+                /* Set display pixel if it's currently 0, or unset it if it's currently 1 */
                 *display_pixel ^= 0xFF;
             }
 
