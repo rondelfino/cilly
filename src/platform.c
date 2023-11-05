@@ -82,65 +82,50 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
             break;
         case KEY_3:
             keypad[2] = 1;
-            // printf("KEY_3\n");
             break;
         case KEY_4:
             keypad[3] = 1;
-            // printf("KEY_4\n");
             break;
 
         case KEY_Q:
             keypad[4] = 1;
-            // printf("KEY_Q\n");
             break;
         case KEY_W:
             keypad[5] = 1;
-            // printf("KEY_W\n");
             break;
         case KEY_E:
             keypad[6] = 1;
-            // printf("KEY_E\n");
             break;
         case KEY_R:
             keypad[7] = 1;
-            // printf("KEY_R\n");
             break;
 
         case KEY_A:
             keypad[8] = 1;
-            // printf("KEY_A\n");
             break;
         case KEY_S:
             keypad[9] = 1;
-            // printf("KEY_S\n");
             break;
         case KEY_D:
             keypad[0xA] = 1;
-            // printf("KEY_D\n");
             break;
         case KEY_F:
             keypad[0xB] = 1;
-            // printf("KEY_F\n");
             break;
 
         case KEY_Z:
             keypad[0xC] = 1;
-            // printf("KEY_Z\n");
             break;
         case KEY_X:
             keypad[0xD] = 1;
-            // printf("KEY_X\n");
             break;
         case KEY_C:
             keypad[0xE] = 1;
-            // printf("KEY_C\n");
             break;
         case KEY_V:
             keypad[0xF] = 1;
-            printf("KEY_V: %d\n", keypad[0xF]);
             break;
         case KEY_ESCAPE:
-            // printf("KEY_ESCAPE\n");
             running = 0;
             break;
         }
@@ -152,70 +137,54 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
         {
         case KEY_1:
             keypad[0] = 0;
-            // printf("KEY_1 released\n");
             break;
         case KEY_2:
             keypad[1] = 0;
-            // printf("KEY_2 released\n");
             break;
         case KEY_3:
             keypad[2] = 0;
-            // printf("KEY_3 released\n");
             break;
         case KEY_4:
             keypad[3] = 0;
-            // printf("KEY_4 released\n");
             break;
 
         case KEY_Q:
             keypad[4] = 0;
-            // printf("KEY_Q released\n");
             break;
         case KEY_W:
             keypad[5] = 0;
-            // printf("KEY_W released\n");
             break;
         case KEY_E:
             keypad[6] = 0;
-            // printf("KEY_E released\n");
             break;
         case KEY_R:
             keypad[7] = 0;
-            // printf("KEY_R released\n");
             break;
 
         case KEY_A:
             keypad[8] = 0;
-            // printf("KEY_A released\n");
             break;
         case KEY_S:
             keypad[9] = 0;
-            // printf("KEY_S released\n");
             break;
         case KEY_D:
             keypad[10] = 0;
-            // printf("KEY_D released\n");
             break;
         case KEY_F:
             keypad[11] = 0;
-            // printf("KEY_F released\n");
             break;
 
         case KEY_Z:
             keypad[12] = 0;
-            // printf("KEY_Z released\n");
             break;
         case KEY_X:
             keypad[13] = 0;
-            // printf("KEY_X released\n");
             break;
         case KEY_C:
             keypad[14] = 0;
-            // printf("KEY_C released\n");
             break;
         case KEY_V:
             keypad[15] = 0;
-            // printf("KEY_V released\n");
             break;
         }
     }
@@ -226,6 +195,7 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
 
 void platform_update(struct window *window, uint8_t *display_buffer, uint16_t display_width, uint16_t display_height)
 {
+    /* Get window attribute to scale sprites based on window size */
     XWindowAttributes w_attributes;
     XGetWindowAttributes(window->dpy, window->w, &w_attributes);
 
