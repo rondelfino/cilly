@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+#define SIXTY_HZ (1.0 / 60.0) * 1000
+
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
     /* Init chip8 fields:
@@ -11,6 +13,7 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
         Clear stack
         Clear registers V0-VF
         Clear memory */
+    chip8_clear_display(chip8);
     memset(chip8, 0, sizeof(struct chip8));
     chip8->PC = pc_start_address;
 
@@ -73,13 +76,17 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
     {
         // Find the ROM file size
         fseek(rom, 0L, SEEK_END);
-        long rom_size = ftell(rom);
+        uint64_t rom_size = ftell(rom);
         fseek(rom, 0L, SEEK_SET);
 
         if (rom_size > 0)
         {
-            if (rom_size <= sizeof(chip8->memory))
+            if (rom_size <= MAX_MEMORY - START_ADDRESS)
             {
+                /* Pointer to buffer starting at start address
+                   Size of the object to be stored
+                   Count of the object
+                   The stream/source to read */
                 fread(chip8->memory + START_ADDRESS, MAX_MEMORY - START_ADDRESS, 1, rom);
             }
             else
@@ -137,7 +144,7 @@ void chip8_load_fontset(struct chip8 *chip8)
     }
 }
 
-void chip8_cycle(struct chip8 *chip8)
+void chip8_cycle(struct chip8 *chip8, float dt)
 {
     /* Fetch opcode */
     chip8->opcode = chip8->memory[chip8->PC];
@@ -150,7 +157,8 @@ void chip8_cycle(struct chip8 *chip8)
     /* Decode and execute */
     chip8->main_table[(chip8->opcode >> 12) & 0xF]();
 
-    // Decrement by 1, 60 times per second
+    /* Decrement by 1, 60 times per second */
+    /* if dt > 1/60th of a second, decrement timers */
     if (chip8->delay_timer > 0)
         chip8->delay_timer--;
 
