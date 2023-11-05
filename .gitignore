@@ -76,6 +76,7 @@ CTestTestfile.cmake
 _deps
 
 # VScode
+.vscode/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
