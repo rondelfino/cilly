@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 
 project(cilly VERSION "0.1" LANGUAGES C)
 
-set(SOURCES src/main.c src/chip8/chip8.c src/chip8/chip8_opcodes.c)
+set(SOURCES src/main.c src/chip8/chip8.c src/chip8/opcodes.c src/platform.c)
 
 set(TEST_SOURCES
     tests/rom_loading.c
     src/chip8/chip8.c
-    src/chip8/chip8_opcodes.c
+    src/chip8/opcodes.c
+    src/platform.c
 )
 
 find_package(X11 REQUIRED)
