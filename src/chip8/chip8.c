@@ -39,6 +39,13 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->main_table[0xE] = tableE;
     chip8->main_table[0xF] = tableF;
 
+    for (size_t i = 0; i <= 0xE; i++)
+    {
+        chip8->table0[i] = op_NULL;
+        chip8->table8[i] = op_NULL;
+        chip8->tableE[i] = op_NULL;
+    }
+
     chip8->table0[0x0] = op_00E0;
     chip8->table0[0xE] = op_00EE;
 
@@ -54,6 +61,11 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 
     chip8->tableE[0x1] = op_EXA1;
     chip8->tableE[0xE] = op_EX9E;
+
+    for (size_t i = 0; i <= 0x65; i++)
+    {
+        chip8->tableF[i] = op_NULL;
+    }
 
     chip8->tableF[0x07] = op_FX07;
     chip8->tableF[0x0A] = op_FX0A;

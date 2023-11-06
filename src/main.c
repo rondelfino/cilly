@@ -26,13 +26,13 @@ int main(int argc, char **argv)
     struct timespec current_time;
     clock_gettime(CLOCK_MONOTONIC, &current_time);
 
-    uint8_t running = 1;
-    while (running)
+    chip8.running = 1;
+    while (chip8.running)
     {
         if (XPending(window.dpy))
         {
             XNextEvent(window.dpy, &window.e);
-            running = platform_process_input(&window, chip8.keypad);
+            chip8.running = platform_process_input(&window, chip8.keypad);
         }
         struct timespec new_time;
         clock_gettime(CLOCK_MONOTONIC, &new_time);

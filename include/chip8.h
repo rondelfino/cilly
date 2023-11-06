@@ -39,8 +39,8 @@ struct chip8
     uint16_t stack[STACK_SIZE];
     uint8_t SP; /* Point to top of stack */
 
-    uint8_t delay_timer;             /* Delay timer register */
-    uint8_t sound_timer;             /* Sound timer register */
+    uint8_t delay_timer; /* Delay timer register */
+    uint8_t sound_timer; /* Sound timer register */
 
     uint8_t V[REGISTER_COUNT]; /* General purpose registers: V0 -> VF */
 
@@ -49,6 +49,8 @@ struct chip8
     uint8_t keypad[KEY_COUNT];
 
     uint8_t draw_flag; /* Update screen when not 0 */
+
+    uint8_t running; /* Set to 1 if the emulator is running, 0 otherwise */
 
     /*  Opcode function pointer tables
         the opcode id (the first nibble) indexes into the corresponding table
@@ -102,13 +104,15 @@ void tableE(struct chip8 *chip8);
 /* Handle opcodes starting with F */
 void tableF(struct chip8 *chip8);
 
+/* Handle unknown opcodes */
+void op_NULL(struct chip8 *chip8);
 /* Jump to memory address NNN */
 void op_1NNN(struct chip8 *chip8);
 /* Call subroutine at memory address NNN */
 void op_2NNN(struct chip8 *chip8);
 /* Skip the following instruction if the value of register VX equals NN (PC += 2), otherwise do nothing */
 void op_3XNN(struct chip8 *chip8);
-/* Skip the following instruction if the value of register VX is not equal to NN (PC+= 2), otherwise do nothing */
+/* Skip the following instruction if the value of register VX is not equal to NN (PC += 2), otherwise do nothing */
 void op_4XNN(struct chip8 *chip8);
 /* Skip the following instruction if the value of register VX is equal to the value of register VY (PC += 2), otherwise
  * do nothing */

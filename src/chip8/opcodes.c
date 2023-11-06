@@ -1,4 +1,6 @@
 #include "chip8.h"
+#include "platform.h"
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -25,6 +27,11 @@ void tableF(struct chip8 *chip8)
 }
 
 /* Opcodes */
+void op_NULL(struct chip8 *chip8)
+{
+    printf("Opcode 0x%04x is unknown. Please load a compatible rom\n", chip8->opcode);
+    chip8->running = 0;
+}
 void op_1NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
