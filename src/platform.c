@@ -80,16 +80,16 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
         switch (window->e.xkey.keycode)
         {
         case KEY_1:
-            keypad[0] = 1;
-            break;
-        case KEY_2:
             keypad[1] = 1;
             break;
-        case KEY_3:
+        case KEY_2:
             keypad[2] = 1;
             break;
-        case KEY_4:
+        case KEY_3:
             keypad[3] = 1;
+            break;
+        case KEY_4:
+            keypad[0xC] = 1;
             break;
 
         case KEY_Q:
@@ -102,34 +102,35 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
             keypad[6] = 1;
             break;
         case KEY_R:
-            keypad[7] = 1;
+            keypad[0xD] = 1;
             break;
 
         case KEY_A:
-            keypad[8] = 1;
+            keypad[7] = 1;
             break;
         case KEY_S:
-            keypad[9] = 1;
+            keypad[8] = 1;
             break;
         case KEY_D:
-            keypad[0xA] = 1;
+            keypad[9] = 1;
             break;
         case KEY_F:
-            keypad[0xB] = 1;
+            keypad[0xE] = 1;
             break;
 
         case KEY_Z:
-            keypad[0xC] = 1;
+            keypad[0xA] = 1;
             break;
         case KEY_X:
-            keypad[0xD] = 1;
+            keypad[0] = 1;
             break;
         case KEY_C:
-            keypad[0xE] = 1;
+            keypad[0xB] = 1;
             break;
         case KEY_V:
             keypad[0xF] = 1;
             break;
+
         case KEY_ESCAPE:
             running = 0;
             break;
@@ -141,16 +142,16 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
         switch (window->e.xkey.keycode)
         {
         case KEY_1:
-            keypad[0] = 0;
-            break;
-        case KEY_2:
             keypad[1] = 0;
             break;
-        case KEY_3:
+        case KEY_2:
             keypad[2] = 0;
             break;
-        case KEY_4:
+        case KEY_3:
             keypad[3] = 0;
+            break;
+        case KEY_4:
+            keypad[0xC] = 0;
             break;
 
         case KEY_Q:
@@ -163,33 +164,33 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
             keypad[6] = 0;
             break;
         case KEY_R:
-            keypad[7] = 0;
+            keypad[0xD] = 0;
             break;
 
         case KEY_A:
-            keypad[8] = 0;
+            keypad[7] = 0;
             break;
         case KEY_S:
-            keypad[9] = 0;
+            keypad[8] = 0;
             break;
         case KEY_D:
-            keypad[10] = 0;
+            keypad[9] = 0;
             break;
         case KEY_F:
-            keypad[11] = 0;
+            keypad[0xE] = 0;
             break;
 
         case KEY_Z:
-            keypad[12] = 0;
+            keypad[0xA] = 0;
             break;
         case KEY_X:
-            keypad[13] = 0;
+            keypad[0] = 0;
             break;
         case KEY_C:
-            keypad[14] = 0;
+            keypad[0xB] = 0;
             break;
         case KEY_V:
-            keypad[15] = 0;
+            keypad[0xF] = 0;
             break;
         }
     }
