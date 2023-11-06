@@ -274,74 +274,21 @@ void op_FX07(struct chip8 *chip8)
 void op_FX0A(struct chip8 *chip8)
 {
     uint8_t x = (chip8->opcode >> 8) & 0xF;
+    uint8_t key_pressed = 0;
 
-    if (chip8->keypad[0])
+    for (uint8_t i = 0; i < KEY_COUNT; i++)
     {
-        chip8->V[x] = 0x0;
+        if (chip8->keypad[i] != 0)
+        {
+            chip8->V[x] = i;
+            key_pressed = 1;
+        }
     }
-    else if (chip8->keypad[1])
-    {
-        chip8->V[x] = 0x1;
-    }
-    else if (chip8->keypad[2])
-    {
-        chip8->V[x] = 0x2;
-    }
-    else if (chip8->keypad[3])
-    {
-        chip8->V[x] = 0x3;
-    }
-    else if (chip8->keypad[4])
-    {
-        chip8->V[x] = 0x4;
-    }
-    else if (chip8->keypad[5])
-    {
-        chip8->V[x] = 0x5;
-    }
-    else if (chip8->keypad[6])
-    {
-        chip8->V[x] = 0x6;
-    }
-    else if (chip8->keypad[7])
-    {
-        chip8->V[x] = 0x7;
-    }
-    else if (chip8->keypad[8])
-    {
-        chip8->V[x] = 0x8;
-    }
-    else if (chip8->keypad[9])
-    {
-        chip8->V[x] = 0x9;
-    }
-    else if (chip8->keypad[10])
-    {
-        chip8->V[x] = 0xA;
-    }
-    else if (chip8->keypad[11])
-    {
-        chip8->V[x] = 0xB;
-    }
-    else if (chip8->keypad[11])
-    {
-        chip8->V[x] = 0xC;
-    }
-    else if (chip8->keypad[11])
-    {
-        chip8->V[x] = 0xD;
-    }
-    else if (chip8->keypad[11])
-    {
-        chip8->V[x] = 0xE;
-    }
-    else if (chip8->keypad[11])
-    {
-        chip8->V[x] = 0xF;
-    }
-    else
+
+    if (!key_pressed)
     {
         chip8->PC -= 2;
+        return;
     }
 }
 void op_FX15(struct chip8 *chip8)
