@@ -14,7 +14,17 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
         Clear registers V0-VF
         Clear memory */
     chip8_clear_display(chip8);
-    memset(chip8, 0, sizeof(struct chip8));
+    // memset(chip8, 0, sizeof(struct chip8));
+    memset(chip8->stack, 0x0000, STACK_SIZE * sizeof(uint16_t));
+    memset(chip8->V, 0x00, REGISTER_COUNT * sizeof(uint8_t));
+    memset(chip8->memory, 0x00, MAX_MEMORY * sizeof(uint8_t));
+    memset(chip8->keypad, 0x00, KEY_COUNT * sizeof(uint8_t));
+    chip8->I = 0x00;
+    chip8->SP = 0;
+    chip8->delay_timer = 0;
+    chip8->sound_timer = 0;
+    chip8->draw_flag = 0;
+    chip8_load_fontset(chip8);
     chip8->PC = pc_start_address;
 
     /* Init seed */
@@ -67,8 +77,8 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
         chip8->tableF[i] = op_NULL;
     }
 
-    chip8->tableF[0x07] = op_FX07;
-    chip8->tableF[0x0A] = op_FX0A;
+    chip8->tableF[0x7] = op_FX07;
+    chip8->tableF[0xA] = op_FX0A;
     chip8->tableF[0x15] = op_FX15;
     chip8->tableF[0x18] = op_FX18;
     chip8->tableF[0x1E] = op_FX1E;
@@ -76,8 +86,6 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->tableF[0x33] = op_FX33;
     chip8->tableF[0x55] = op_FX55;
     chip8->tableF[0x65] = op_FX65;
-
-    chip8_load_fontset(chip8);
 }
 
 void chip8_load_rom(struct chip8 *chip8, const char *filename)
@@ -86,7 +94,7 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
 
     if (rom)
     {
-        // Find the ROM file size
+        /* Find the ROM file size */
         fseek(rom, 0L, SEEK_END);
         uint64_t rom_size = ftell(rom);
         fseek(rom, 0L, SEEK_SET);
@@ -103,14 +111,16 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
             }
             else
             {
-                // Handle ROM too large for memory
+                /* Handle ROM too large for memory */
                 printf("Error: ROM size exceeds memory bounds.\n");
+                exit(EXIT_FAILURE);
             }
         }
         else
         {
-            // Handle empty ROM file
+            /* Handle empty ROM file */
             printf("Error: ROM file is empty.\n");
+            exit(EXIT_FAILURE);
         }
         fclose(rom);
     }
@@ -118,6 +128,7 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
     {
         // Handle file opening error
         printf("Error: Failed to open the ROM file.\n");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -150,9 +161,10 @@ void chip8_load_fontset(struct chip8 *chip8)
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    for (uint8_t i = 0; i < sizeof(fontset); i++)
+    uint8_t size = sizeof(fontset);
+    for (uint8_t i = 0; i < size; i++)
     {
-        chip8->memory[FONT_START_ADDR + i] = fontset[i];
+        chip8->memory[FONTSET_START_ADDRESS + i] = fontset[i];
     }
 }
 
@@ -164,24 +176,33 @@ void chip8_cycle(struct chip8 *chip8)
     chip8->opcode |= chip8->memory[chip8->PC + 1];
 
     /* Point to next opcode */
-    chip8->PC += 2;
+    if (chip8->PC >= START_ADDRESS && chip8->PC <= 0xFFF)
+        chip8->PC += 2;
+    else
+    {
+        printf("Error: Invalid memory access at address 0x%04X\n", chip8->PC);
+        exit(EXIT_FAILURE);
+    }
 
     /* Decode and execute */
     chip8->main_table[(chip8->opcode >> 12) & 0xF]();
+    // printf("Executing opcode 0x%04X at memory address 0x%04X\n", chip8->opcode, chip8->PC);
+
+    // printf("0x%04x\n", chip8->opcode);
 
     /* Decrement by 1, 60 times per second */
     /* if dt > 1/60th of a second, decrement timers */
-    if (chip8->delay_timer > 0)
-        chip8->delay_timer--;
+    // if (chip8->delay_timer > 0)
+    //     chip8->delay_timer--;
 
-    if (chip8->sound_timer > 0)
-    {
-        printf("BEEP!\n");
-        chip8->sound_timer--;
-    }
+    // if (chip8->sound_timer > 0)
+    // {
+    // printf("BEEP!\n");
+    // chip8->sound_timer--;
+    // }
 }
 
 void chip8_clear_display(struct chip8 *chip8)
 {
-    memset(chip8->display, 0, sizeof(chip8->display));
+    memset(chip8->display, 0, (DISPLAY_WIDTH * DISPLAY_HEIGHT) * sizeof(uint8_t));
 }
