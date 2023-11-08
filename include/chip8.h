@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef chip8_H
-#define chip8_H
+#ifndef CHIP8_H
+#define CHIP8_H
 
 #include <stdint.h>
 
@@ -15,7 +15,14 @@
 #define STACK_SIZE 16
 
 #define START_ADDRESS 0x200
-#define FONT_START_ADDR 0x50
+#define FONTSET_START_ADDRESS 0x50
+
+typedef enum
+{
+    Pressed,
+    Released,
+    Idle
+} keystate;
 
 /* Opcode function pointer type for opcode tables */
 typedef void (*opcode_func)();
@@ -35,7 +42,7 @@ struct chip8
     uint16_t PC;
 
     /* Push PC address when subroutine (function) is called,
-      pop when it returns */
+     * pop when it returns */
     uint16_t stack[STACK_SIZE];
     uint8_t SP; /* Point to top of stack */
 
@@ -53,20 +60,20 @@ struct chip8
     uint8_t running; /* Set to 1 if the emulator is running, 0 otherwise */
 
     /*  Opcode function pointer tables
-        the opcode id (the first nibble) indexes into the corresponding table
-        If it's 0, 8, E, or F, the id will be used to index into the corresponding table through the main_table
-        i.e.
-            opcode = 0x8XY7, id = 8
-            index into main_table using '8'
+     *  the opcode id (the first nibble) indexes into the corresponding table
+     *  If it's 0, 8, E, or F, the id will be used to index into the corresponding table through the main_table
+     *  i.e.
+     *      opcode = 0x8XY7, id = 8
+     *      index into main_table using '8'
 
-            main_table[0x8] = table8;
+     *      main_table[0x8] = table8;
 
-            call table8();
-            table8() indexes into table8[] using the fourth nibble (opcodes starting with 8 only differ by the fourth
-       nibble)
+     *      call table8();
+     *      table8() indexes into table8[] using the fourth nibble (opcodes starting with 8 only differ by the fourth
+     * nibble)
 
-            the function for the opcode is then called
-            table8[0x7] = op_8XY7(); */
+     *      the function for the opcode is then called
+     *      table8[0x7] = op_8XY7(); */
     opcode_func main_table[0xF + 1];
     opcode_func table0[0xE + 1];
     opcode_func table8[0xE + 1];
@@ -75,11 +82,11 @@ struct chip8
 };
 
 /* Initializes CHIP8 state
-   @param pc_start_address Set memory address where the game is located; default is COSMAC-VIP at 0x200 */
+ * @param pc_start_address Set memory address where the game is located; default is COSMAC-VIP at 0x200 */
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address);
 
 /* Load a ROM to memory
-   @param filename Name or path of a compatible *.ch8 ROM */
+ * @param filename Name or path of a compatible *.ch8 ROM */
 void chip8_load_rom(struct chip8 *chip8, const char *filename);
 
 /* Load default fontset to memory */
@@ -106,6 +113,10 @@ void tableF(struct chip8 *chip8);
 
 /* Handle unknown opcodes */
 void op_NULL(struct chip8 *chip8);
+/* Clear the screen */
+void op_00E0(struct chip8 *chip8);
+/* Returns from subroutine */
+void op_00EE(struct chip8 *chip8);
 /* Jump to memory address NNN */
 void op_1NNN(struct chip8 *chip8);
 /* Call subroutine at memory address NNN */
@@ -121,25 +132,7 @@ void op_5XY0(struct chip8 *chip8);
 void op_6XNN(struct chip8 *chip8);
 /* Add NN to VX */
 void op_7XNN(struct chip8 *chip8);
-/* Skip the following instruction if the value of register VX is not equal to the value of register VY */
-void op_9XY0(struct chip8 *chip8);
-/* Set the index register, I, to memory address NNN */
-void op_ANNN(struct chip8 *chip8);
-/* Jump to memory address NNN plus V0 - COSMAC-VIP
-   Jump to memory address XNN plus VX - SUPER-CHIP */
-void op_BNNN(struct chip8 *chip8);
 
-/* Set VX to a random number with a mask of NN (random number AND NN) */
-void op_CXNN(struct chip8 *chip8);
-
-/* Draw a sprite at position (VX, VY) with N bytes of sprite data starting at the address stored
-   in I. Set VF to 1 if any set pixels are changed to unset, and 0 otherwise */
-void op_DXYN(struct chip8 *chip8);
-
-/* Clear the screen */
-void op_00E0(struct chip8 *chip8);
-/* Returns from subroutine */
-void op_00EE(struct chip8 *chip8);
 /* Set VX to value in VY */
 void op_8XY0(struct chip8 *chip8);
 /* Set VX to VX OR VY */
@@ -148,38 +141,45 @@ void op_8XY1(struct chip8 *chip8);
 void op_8XY2(struct chip8 *chip8);
 /* Set VX to VX XOR VY */
 void op_8XY3(struct chip8 *chip8);
-
 /* Add the value of register VY to register VX. Set VF to 1 if carry occurs (overflow), otherwise set VF to 0 */
 void op_8XY4(struct chip8 *chip8);
-
-/* Subtract the value of register VY from register VX. Set VF to 0 if a borrow occur (underflow), otherwise set VF to 1
- */
+/* Subtract the value of register VY from register VX.
+ * Set VF to 0 if a borrow occur (underflow), otherwise set VF to 1 */
 void op_8XY5(struct chip8 *chip8);
-
 /* Changes depending on interpreter
   COSMAC-VIP: Set VX to VY.
   All other interpreters: Don't set VX to VY. */
 
-/* Store the value of register VY shifted right one bit in register VX. Set register VF to the least significant bit
- * prior to the shift */
+/* Store the value of register VY shifted right one bit in register VX.
+ * Set register VF to the least significant bit prior to the shift */
 void op_8XY6(struct chip8 *chip8);
-
 /* Set register VX to the value of VY minus VX. Set VF to 0 if a borrow occurs (underflow), otherwise set VF to 1 */
 void op_8XY7(struct chip8 *chip8);
-
 /* Changes depending on interpreter
   COSMAC-VIP: Set VX to VY.
   All other interpreters: Don't set VX to VY. */
 
-/* Store the value of register VY shifted left one bit in register VX. Set register VF to the most significant bit prior
- * to the shift */
+/* Store the value of register VY shifted left one bit in register VX.
+ * Set register VF to the most significant bit prior to the shift */
 void op_8XYE(struct chip8 *chip8);
-
-/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not
- * pressed */
+/* Skip the following instruction if the value of register VX
+ * is not equal to the value of register VY */
+void op_9XY0(struct chip8 *chip8);
+/* Set the index register, I, to memory address NNN */
+void op_ANNN(struct chip8 *chip8);
+/* Jump to memory address NNN plus V0 - COSMAC-VIP
+ * Jump to memory address XNN plus VX - SUPER-CHIP */
+void op_BNNN(struct chip8 *chip8);
+/* Set VX to a random number with a mask of NN (random number AND NN) */
+void op_CXNN(struct chip8 *chip8);
+/* Draw a sprite at position (VX, VY) with N bytes of sprite data starting at the address stored
+ * in I. Set VF to 1 if any set pixels are changed to unset, and 0 otherwise */
+void op_DXYN(struct chip8 *chip8);
+/* Skip the following instruction if the key corresponding to the hex value
+ * currently stored in register VX is not pressed */
 void op_EXA1(struct chip8 *chip8);
-/* Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
- */
+/* Skip the following instruction if the key corresponding to the hex value
+ * currently stored in register VX is pressed*/
 void op_EX9E(struct chip8 *chip8);
 
 /* Store the current value of the delay timer in register VX */
