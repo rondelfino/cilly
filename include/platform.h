@@ -1,5 +1,6 @@
 #pragma once
 
+#include <X11/X.h>
 #include <X11/Xlib.h>
 #include <stdint.h>
 
@@ -24,7 +25,8 @@ void platform_destroy_window(struct window *window);
 /* Processes input
   @return return 0 if an escape key is pressed */
 uint8_t platform_process_input(struct window *window, uint8_t *keypad);
-/* Redraws the screen */
+uint8_t platform_get_key_from_keycode(KeyCode keycode);
+/* Copies data from given buffer to screen */
 void platform_update(struct window *window, uint8_t *display_buffer, uint16_t display_width, uint16_t display_height);
 
 #endif

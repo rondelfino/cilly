@@ -1,5 +1,4 @@
 #include "platform.h"
-#include <X11/Xlib.h>
 #include <stdio.h>
 
 #define KEY_ESCAPE 9
@@ -22,6 +21,8 @@
 #define KEY_X 53
 #define KEY_C 54
 #define KEY_V 55
+
+#define INVALID_KEY 0x69
 
 void platform_create_window(struct window *window)
 {
@@ -70,6 +71,67 @@ void platform_destroy_window(struct window *window)
     XCloseDisplay(window->dpy);
 }
 
+uint8_t platform_get_key_from_keycode(KeyCode keycode)
+{
+    switch (keycode)
+    {
+    case KEY_1:
+        return 0x1;
+        break;
+    case KEY_2:
+        return 0x2;
+        break;
+    case KEY_3:
+        return 0x3;
+        break;
+    case KEY_4:
+        return 0xC;
+        break;
+
+    case KEY_Q:
+        return 0x4;
+        break;
+    case KEY_W:
+        return 0x5;
+        break;
+    case KEY_E:
+        return 0x6;
+        break;
+    case KEY_R:
+        return 0xD;
+        break;
+
+    case KEY_A:
+        return 0x7;
+        break;
+    case KEY_S:
+        return 0x8;
+        break;
+    case KEY_D:
+        return 0x9;
+        break;
+    case KEY_F:
+        return 0xE;
+        break;
+
+    case KEY_Z:
+        return 0xA;
+        break;
+    case KEY_X:
+        return 0x0;
+        break;
+    case KEY_C:
+        return 0xB;
+        break;
+    case KEY_V:
+        return 0xF;
+        break;
+    default:
+        return INVALID_KEY;
+        break;
+    }
+}
+
 uint8_t platform_process_input(struct window *window, uint8_t *keypad)
 {
     uint8_t running = 1;
@@ -77,128 +139,42 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
     {
         XNextEvent(window->dpy, &window->e);
 
+        /* Get the symbolic representation of the current key */
+        KeySym keysym = XLookupKeysym(&window->e.xkey, 0);
+        /* Convert it to a keycode */
+        KeyCode keycode = XKeysymToKeycode(window->dpy, keysym);
+        /* Get the corresponding key for the current keycode */
+        uint8_t key = platform_get_key_from_keycode(keycode);
+
         /* Set on key press */
         switch (window->e.type)
         {
-        case KeyPress: {
-            switch (window->e.xkey.keycode)
-            {
-            case KEY_1:
-                keypad[1] = 1;
-                break;
-            case KEY_2:
-                keypad[2] = 1;
-                break;
-            case KEY_3:
-                keypad[3] = 1;
-                break;
-            case KEY_4:
-                keypad[0xC] = 1;
-                break;
-
-            case KEY_Q:
-                keypad[4] = 1;
-                break;
-            case KEY_W:
-                keypad[5] = 1;
-                break;
-            case KEY_E:
-                keypad[6] = 1;
-                break;
-            case KEY_R:
-                keypad[0xD] = 1;
-                break;
-
-            case KEY_A:
-                keypad[7] = 1;
-                break;
-            case KEY_S:
-                keypad[8] = 1;
-                break;
-            case KEY_D:
-                keypad[9] = 1;
-                break;
-            case KEY_F:
-                keypad[0xE] = 1;
-                break;
-
-            case KEY_Z:
-                keypad[0xA] = 1;
-                break;
-            case KEY_X:
-                keypad[0] = 1;
-                break;
-            case KEY_C:
-                keypad[0xB] = 1;
-                break;
-            case KEY_V:
-                keypad[0xF] = 1;
-                break;
-
-            case KEY_ESCAPE:
+        case KeyPress:
+            /* Ensure the key pressed is a valid key */
+            if (key != INVALID_KEY)
+                keypad[key] = 1;
+            else if (keycode == KEY_ESCAPE)
                 running = 0;
-                break;
-            }
-        }
-        break;
+            break;
 
-        case KeyRelease: {
-            switch (window->e.xkey.keycode)
+        case KeyRelease:
+            if (XEventsQueued(window->dpy, QueuedAfterReading))
             {
-            case KEY_1:
-                keypad[1] = 0;
-                break;
-            case KEY_2:
-                keypad[2] = 0;
-                break;
-            case KEY_3:
-                keypad[3] = 0;
-                break;
-            case KEY_4:
-                keypad[0xC] = 0;
-                break;
+                XEvent next_e;
+                XPeekEvent(window->dpy, &next_e);
 
-            case KEY_Q:
-                keypad[4] = 0;
-                break;
-            case KEY_W:
-                keypad[5] = 0;
-                break;
-            case KEY_E:
-                keypad[6] = 0;
-                break;
-            case KEY_R:
-                keypad[0xD] = 0;
-                break;
-
-            case KEY_A:
-                keypad[7] = 0;
-                break;
-            case KEY_S:
-                keypad[8] = 0;
-                break;
-            case KEY_D:
-                keypad[9] = 0;
-                break;
-            case KEY_F:
-                keypad[0xE] = 0;
-                break;
-
-            case KEY_Z:
-                keypad[0xA] = 0;
-                break;
-            case KEY_X:
-                keypad[0] = 0;
-                break;
-            case KEY_C:
-                keypad[0xB] = 0;
-                break;
-            case KEY_V:
-                keypad[0xF] = 0;
-                break;
+                /* Check if key is being held */
+                /* This is necessary to prevent auto repeating keys
+                 * Ommitting this  will cause the X server to send KeyRelease events after KeyPress events while the key
+                 * is held */
+                if (next_e.type == KeyPress && next_e.xkey.time == window->e.xkey.time &&
+                    next_e.xkey.keycode == window->e.xkey.keycode)
+                    /* Key wasn’t actually released */
+                    break;
             }
-        }
-        break;
+            if (key != INVALID_KEY)
+                keypad[key] = 2;
+            break;
         }
     }
     return running;

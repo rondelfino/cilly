@@ -42,7 +42,7 @@ void op_1NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
 
-    printf("Executing opcode 0x%04x (jump to address) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
+    // printf("Executing opcode 0x%04x (jump to address) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
 
     chip8->PC = address;
 }
@@ -50,12 +50,12 @@ void op_2NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
 
-    printf("Executing opcode 0x%04x (call subroutine) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
+    // printf("Executing opcode 0x%04x (call subroutine) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
 
     if (chip8->SP >= STACK_SIZE)
     {
         // Debug information for stack overflow
-        printf("Stack overflow detected. Terminating program.\n");
+        // printf("Stack overflow detected. Terminating program.\n");
         chip8->running = 0;
         return;
     }
@@ -69,8 +69,8 @@ void op_3XNN(struct chip8 *chip8)
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t nn = chip8->opcode & 0xFF;
 
-    printf("Executing opcode 0x3%X%02X: Skip next instruction if V%X (%d) == 0x%02X (%d)\n", x, nn, x, chip8->V[x], nn,
-           chip8->V[x]);
+    // printf("Executing opcode 0x3%X%02X: Skip next instruction if V%X (%d) == 0x%02X (%d)\n", x, nn, x, chip8->V[x],
+    // nn, chip8->V[x]);
 
     if (chip8->V[x] == nn)
         chip8->PC += 2;
@@ -237,7 +237,7 @@ void op_DXYN(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
     uint8_t n = chip8->opcode & 0xF;
 
-    printf("Executing opcode 0xD%X%0X: Draw sprite from V%X to V%X, height: %d\n", x, y, x, y, n);
+    // printf("Executing opcode 0xD%X%0X: Draw sprite from V%X to V%X, height: %d\n", x, y, x, y, n);
 
     /* Cap to the dimensions of the display buffer */
     uint8_t x_pos = chip8->V[x] % DISPLAY_WIDTH;
@@ -285,7 +285,7 @@ void op_EXA1(struct chip8 *chip8)
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t key = chip8->V[x];
 
-    if (!chip8->keypad[key])
+    if (chip8->keypad[key] != 1)
         chip8->PC += 2;
 }
 void op_EX9E(struct chip8 *chip8)
@@ -293,7 +293,7 @@ void op_EX9E(struct chip8 *chip8)
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t key = chip8->V[x];
 
-    if (chip8->keypad[key])
+    if (chip8->keypad[key] == 1)
         chip8->PC += 2;
 }
 
@@ -306,19 +306,19 @@ void op_FX07(struct chip8 *chip8)
 void op_FX0A(struct chip8 *chip8)
 {
     uint8_t x = (chip8->opcode >> 8) & 0xF;
-    uint8_t key_pressed = 0;
+    uint8_t key_released = 0;
 
     for (uint8_t i = 0; i < KEY_COUNT; i++)
     {
-        if (chip8->keypad[i])
+        if (chip8->keypad[i] == 2)
         {
             chip8->V[x] = i;
-            key_pressed = 1;
+            key_released = 1;
             break;
         }
     }
 
-    if (!key_pressed)
+    if (!key_released)
     {
         chip8->PC -= 2;
     }

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-#define SIXTY_HZ (1.0 / 60.0) * 1000
+// #define SIXTY_HZ (1.0 / 60.0) * 1000
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
@@ -13,18 +13,18 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
         Clear stack
         Clear registers V0-VF
         Clear memory */
-    chip8_clear_display(chip8);
-    // memset(chip8, 0, sizeof(struct chip8));
-    memset(chip8->stack, 0x0000, STACK_SIZE * sizeof(uint16_t));
-    memset(chip8->V, 0x00, REGISTER_COUNT * sizeof(uint8_t));
-    memset(chip8->memory, 0x00, MAX_MEMORY * sizeof(uint8_t));
-    memset(chip8->keypad, 0x00, KEY_COUNT * sizeof(uint8_t));
-    chip8->I = 0x00;
-    chip8->SP = 0;
-    chip8->delay_timer = 0;
-    chip8->sound_timer = 0;
-    chip8->draw_flag = 0;
-    chip8_load_fontset(chip8);
+    // chip8_clear_display(chip8);
+    memset(chip8, 0, sizeof(struct chip8));
+    // memset(chip8->stack, 0x0000, STACK_SIZE * sizeof(uint16_t));
+    // memset(chip8->V, 0x00, REGISTER_COUNT * sizeof(uint8_t));
+    // memset(chip8->memory, 0x00, MAX_MEMORY * sizeof(uint8_t));
+    // memset(chip8->keypad, 0x00, KEY_COUNT * sizeof(uint8_t));
+    // chip8->I = 0x00;
+    // chip8->SP = 0;
+    // chip8->delay_timer = 0;
+    // chip8->sound_timer = 0;
+    // chip8->draw_flag = 0;
+    // chip8_load_fontset(chip8);
     chip8->PC = pc_start_address;
 
     /* Init seed */
@@ -168,6 +168,15 @@ void chip8_load_fontset(struct chip8 *chip8)
     }
 }
 
+void chip8_reset_released_keys(struct chip8 *chip8)
+{
+    for (uint8_t key = 0; key < KEY_COUNT; key++)
+    {
+        if (chip8->keypad[key] == 2)
+            chip8->keypad[key] = 0;
+    }
+}
+
 void chip8_cycle(struct chip8 *chip8)
 {
     /* Fetch opcode */
@@ -200,6 +209,9 @@ void chip8_cycle(struct chip8 *chip8)
     // printf("BEEP!\n");
     // chip8->sound_timer--;
     // }
+
+    /* Set released keys to idle */
+    chip8_reset_released_keys(chip8);
 }
 
 void chip8_clear_display(struct chip8 *chip8)

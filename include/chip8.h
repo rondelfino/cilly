@@ -35,10 +35,10 @@ struct chip8
 
     uint8_t display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 
-    /* Index register :Store memory addresses to be used in operations */
+    /* Index register; store memory address to be used in operations */
     uint16_t I;
 
-    /* Program counter: Hold the memory address for the next instruction */
+    /* Program counter; store memory address for the next instruction */
     uint16_t PC;
 
     /* Push PC address when subroutine (function) is called,
@@ -53,8 +53,8 @@ struct chip8
 
     uint16_t opcode; /* Current opcode to be decoded and executed */
 
-    uint8_t keypad[KEY_COUNT];
-
+    uint8_t keypad[KEY_COUNT]; /* Set to 0 if idle, 1 if key is pressed, 2 if key is released */
+ 
     uint8_t draw_flag; /* Update screen when not 0 */
 
     uint8_t running; /* Set to 1 if the emulator is running, 0 otherwise */
@@ -72,8 +72,8 @@ struct chip8
      *      table8() indexes into table8[] using the fourth nibble (opcodes starting with 8 only differ by the fourth
      * nibble)
 
-     *      the function for the opcode is then called
-     *      table8[0x7] = op_8XY7(); */
+     *      the function for the opcode is then called because:
+     *      table8[0x7] = op_8XY7; */
     opcode_func main_table[0xF + 1];
     opcode_func table0[0xE + 1];
     opcode_func table8[0xE + 1];
@@ -84,24 +84,19 @@ struct chip8
 /* Initializes CHIP8 state
  * @param pc_start_address Set memory address where the game is located; default is COSMAC-VIP at 0x200 */
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address);
-
 /* Load a ROM to memory
  * @param filename Name or path of a compatible *.ch8 ROM */
 void chip8_load_rom(struct chip8 *chip8, const char *filename);
-
 /* Load default fontset to memory */
 void chip8_load_fontset(struct chip8 *chip8);
-
-/* void chip8_decode_and_execute_opcode(struct chip8 *chip8, opcode_func main_table); */
-
-/* CHIP8 instruction cycle. Also handle sound and delay timers. */
+/* Emulate CHIP8 instruction cycle */
 void chip8_cycle(struct chip8 *chip8);
-
 /* Set all pixels on screen to 0 */
 void chip8_clear_display(struct chip8 *chip8);
+/* Set all keys to idle/0 */
+void chip8_reset_released_keys(struct chip8 *chip8);
 
 /* Opcode functions */
-
 /* Handle opcodes starting with 0 */
 void table0(struct chip8 *chip8);
 /* Handle opcodes starting with 8 */
