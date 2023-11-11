@@ -2,13 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 
 project(cilly VERSION "0.1" LANGUAGES C)
 
-set(SOURCES src/main.c src/chip8/chip8.c src/chip8/opcodes.c src/platform.c)
+set(SOURCES src/main.c src/chip8/chip8.c src/platform.c)
 
 set(TEST_SOURCES
     tests/rom_loading.c
     src/chip8/chip8.c
     src/chip8/opcodes.c
-    src/platform.c
 )
 
 find_package(X11 REQUIRED)
@@ -19,9 +18,12 @@ add_executable(tests ${TEST_SOURCES})
 target_include_directories(cilly PRIVATE include/)
 target_include_directories(tests PRIVATE include/)
 
-target_link_libraries(cilly X11::X11)
+target_link_libraries(cilly X11::X11 m)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # compiler options
-target_compile_options(cilly PRIVATE -Wall -Wextra -g3)
+# target_compile_options(cilly PRIVATE -Wall -Wextra)
+target_compile_options(cilly PRIVATE -Wall -Wextra -Wpedantic -fsanitize=address -fno-omit-frame-pointer -g)
+target_link_options(cilly PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
+
