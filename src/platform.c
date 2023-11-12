@@ -1,5 +1,6 @@
 #include "platform.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define KEY_ESCAPE 9
 #define KEY_1 10
@@ -30,13 +31,14 @@ void platform_create_window(struct window *window)
     window->dpy = XOpenDisplay(NULL);
     if (!window->dpy)
     {
-        /* handle error */
+        /* Handle error */
+        exit(EXIT_FAILURE);
     }
 
     window->scr = DefaultScreen(window->dpy);
 
-    window->black = BlackPixel(window->dpy, window->scr);
-    window->white = WhitePixel(window->dpy, window->scr);
+    window->background_col = BlackPixel(window->dpy, window->scr);
+    window->foreground_col = WhitePixel(window->dpy, window->scr);
 
     uint16_t screen_width = DisplayWidth(window->dpy, window->scr);
     uint16_t screen_height = DisplayHeight(window->dpy, window->scr);
@@ -46,7 +48,7 @@ void platform_create_window(struct window *window)
     uint16_t window_y = (screen_height - (screen_height / 2)) / 2;
 
     window->w = XCreateSimpleWindow(window->dpy, RootWindow(window->dpy, window->scr), window_x, window_y,
-                                    screen_width / 3, (screen_width / 3) / 2, 0, window->black, window->black);
+                                    screen_width / 3, (screen_width / 3) / 2, 0, window->background_col, window->foreground_col);
 
     XStoreName(window->dpy, window->w, "Cilly");
     XMapWindow(window->dpy, window->w);
@@ -150,11 +152,14 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
         switch (window->e.type)
         {
         case KeyPress:
+            if (keycode == KEY_ESCAPE)
+            {
+                running = 0;
+                break;
+            }
             /* Ensure the key pressed is a valid key */
             if (key != INVALID_KEY)
                 keypad[key] = 1;
-            else if (keycode == KEY_ESCAPE)
-                running = 0;
             break;
 
         case KeyRelease:
@@ -170,7 +175,7 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
                 if (next_e.type == KeyPress && next_e.xkey.time == window->e.xkey.time &&
                     next_e.xkey.keycode == window->e.xkey.keycode)
                     /* Key wasn’t actually released */
-                    break;
+                    continue;
             }
             if (key != INVALID_KEY)
                 keypad[key] = 2;
@@ -180,7 +185,7 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
     return running;
 }
 
-void platform_update(struct window *window, uint8_t *display_buffer, uint16_t display_width, uint16_t display_height)
+void platform_update(struct window *window, uint8_t *display_buffer, uint8_t display_width, uint8_t display_height)
 {
     /* If window size changes get new dimensions */
     if (window->e.type == ConfigureNotify || window->e.type == Expose)
@@ -207,9 +212,9 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint16_t di
         for (uint8_t x = 0; x < display_width; x++)
         {
             if (display_buffer[y * display_width + x])
-                XSetForeground(window->dpy, window->gc, window->white);
+                XSetForeground(window->dpy, window->gc, window->foreground_col);
             else
-                XSetForeground(window->dpy, window->gc, window->black);
+                XSetForeground(window->dpy, window->gc, window->background_col);
 
             uint16_t x_scaled_pos = x * min_scale;
             uint16_t rect_w = (x + 1) * min_scale - x_scaled_pos;
