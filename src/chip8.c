@@ -10,89 +10,13 @@
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
-    /* Init chip8 fields:
-        Clear display
-        Clear stack
-        Clear registers V0-VF
-        Clear memory */
-    // memset(chip8->stack, 0, STACK_SIZE * sizeof(uint16_t));
-    memset(chip8->V, 0, REGISTER_COUNT * sizeof(uint8_t));
-    // memset(chip8->memory, 0, MAX_MEMORY * sizeof(uint8_t));
-    memset(chip8->keypad, 0, KEY_COUNT * sizeof(uint8_t));
-    chip8_clear_display(chip8);
-
-    chip8->I = 0;
-    chip8->SP = 0;
-    chip8->delay_timer = 0;
-    chip8->sound_timer = 0;
-    chip8->draw_flag = 0;
-    chip8->delay_timer_acc = 0;
-    chip8->sound_timer_acc = 0;
-
-    // memset(chip8, 0, sizeof(struct chip8));
+    /* Init chip8 fields */
+    memset(chip8, 0, sizeof(struct chip8));
     chip8->PC = pc_start_address;
-
     chip8_load_fontset(chip8);
 
     /* Init seed */
     srand(time(NULL));
-    // printf("Seed: %ld\n", time(NULL));
-
-    /* Setup function pointer tables */
-    // chip8->main_table[0x0] = table0;
-    // chip8->main_table[0x1] = op_1NNN;
-    // chip8->main_table[0x2] = op_2NNN;
-    // chip8->main_table[0x3] = op_3XNN;
-    // chip8->main_table[0x4] = op_4XNN;
-    // chip8->main_table[0x5] = op_5XY0;
-    // chip8->main_table[0x6] = op_6XNN;
-    // chip8->main_table[0x7] = op_7XNN;
-    // chip8->main_table[0x8] = table8;
-    // chip8->main_table[0x9] = op_9XY0;
-    // chip8->main_table[0xA] = op_ANNN;
-    // chip8->main_table[0xB] = op_BNNN;
-    // chip8->main_table[0xC] = op_CXNN;
-    // chip8->main_table[0xD] = op_DXYN;
-    // chip8->main_table[0xE] = tableE;
-    // chip8->main_table[0xF] = tableF;
-
-    // for (size_t i = 0; i <= 0xE; i++)
-    // {
-    //     chip8->table0[i] = op_NULL;
-    //     chip8->table8[i] = op_NULL;
-    //     chip8->tableE[i] = op_NULL;
-    // }
-
-    // chip8->table0[0x0] = op_00E0;
-    // chip8->table0[0xE] = op_00EE;
-
-    // chip8->table8[0x0] = op_8XY0;
-    // chip8->table8[0x1] = op_8XY1;
-    // chip8->table8[0x2] = op_8XY2;
-    // chip8->table8[0x3] = op_8XY3;
-    // chip8->table8[0x4] = op_8XY4;
-    // chip8->table8[0x5] = op_8XY5;
-    // chip8->table8[0x6] = op_8XY6;
-    // chip8->table8[0x7] = op_8XY7;
-    // chip8->table8[0xE] = op_8XYE;
-
-    // chip8->tableE[0x1] = op_EXA1;
-    // chip8->tableE[0xE] = op_EX9E;
-
-    // for (size_t i = 0; i <= 0x65; i++)
-    // {
-    //     chip8->tableF[i] = op_NULL;
-    // }
-
-    // chip8->tableF[0x07] = op_FX07;
-    // chip8->tableF[0x0A] = op_FX0A;
-    // chip8->tableF[0x15] = op_FX15;
-    // chip8->tableF[0x18] = op_FX18;
-    // chip8->tableF[0x1E] = op_FX1E;
-    // chip8->tableF[0x29] = op_FX29;
-    // chip8->tableF[0x33] = op_FX33;
-    // chip8->tableF[0x55] = op_FX55;
-    // chip8->tableF[0x65] = op_FX65;
 }
 
 void chip8_load_rom(struct chip8 *chip8, const char *filename)
@@ -110,10 +34,6 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
         {
             if (rom_size <= MAX_MEMORY)
             {
-                /* Pointer to buffer starting at start address
-                   Size of the object to be stored
-                   Count of the object
-                   The stream/source to read */
                 fread(chip8->memory + chip8->PC, 1, rom_size, rom);
             }
             else
@@ -169,7 +89,7 @@ void chip8_load_fontset(struct chip8 *chip8)
     };
 
     uint8_t size = sizeof(fontset);
-    for (uint8_t i = 0; i < 80; i++)
+    for (uint8_t i = 0; i < size; i++)
     {
         chip8->memory[FONTSET_START_ADDRESS + i] = fontset[i];
     }
@@ -190,7 +110,6 @@ void chip8_cycle(struct chip8 *chip8)
     uint16_t opcode = chip8->memory[chip8->PC];
     opcode <<= 8;
     opcode |= chip8->memory[chip8->PC + 1];
-    printf("0x%04x\n", opcode);
 
     uint8_t group_id = (opcode >> 12) & 0xF;
 
@@ -204,7 +123,6 @@ void chip8_cycle(struct chip8 *chip8)
     chip8->PC += 2;
 
     /* Decode and execute */
-    // chip8->main_table[(chip8->opcode >> 12) & 0xF]();
     switch (group_id)
     {
     case 0x0:
@@ -397,6 +315,7 @@ void chip8_cycle(struct chip8 *chip8)
         /* Draw sprite from address in I to N */
         for (uint8_t row = 0; row < n; row++)
         {
+            /* Stop drawing if bottom edge is reached */
             if (y_pos + row >= DISPLAY_HEIGHT)
                 break;
 
@@ -406,28 +325,27 @@ void chip8_cycle(struct chip8 *chip8)
             /* Iterate over extracted byte */
             for (uint8_t col = 0; col < 8; col++)
             {
+                /* Stop drawing if right edge is reached */
                 if (x_pos + col >= DISPLAY_WIDTH)
                     break;
 
                 /* Extract current bit */
                 uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 0x1;
                 /* Get current pixel value from display buffer */
+                uint8_t *display_pixel = &chip8->display[((y_pos + row) * DISPLAY_WIDTH) + (x_pos + col)];
 
                 /* Extracted bit from sprite is set */
                 if (sprite_pixel)
                 {
                     /* Current pixel from display is set */
-                    if (chip8->display[((y_pos + row) * DISPLAY_WIDTH) + (x_pos + col)])
+                    if (*display_pixel)
                         /* Collision: set VF to 1 */
                         chip8->V[0xF] = 1;
 
                     /* Set display pixel if it's currently 0, or unset it if it's currently 1 */
-                    chip8->display[((y_pos + row) * DISPLAY_WIDTH) + (x_pos + col)] ^= 1;
+                    *display_pixel ^= 1;
                 }
-
-                /* Stop drawing if right edge is reached */
             }
-            /* Stop drawing if bottom edge is reached */
         }
         break;
     }
@@ -563,31 +481,9 @@ void chip8_cycle(struct chip8 *chip8)
         break;
     }
     /* Set released keys to idle */
+    chip8_reset_released_keys(chip8);
 
-    // printf("0x%04x\n", chip8->opcode);
-
-    /* Decrement by 1, 60 times per second */
-    /* if dt > 1/60th of a second, decrement timers */
-    // if (chip8->delay_timer > 0)
-    // {
-    //     chip8->delay_timer_acc += dt;
-    //     if (dt >= SIXTY_HZU)
-    //     {
-    //         chip8->delay_timer--;
-    //         chip8->delay_timer_acc = 0;
-    //     }
-    // }
-
-    // if (chip8->sound_timer > 0)
-    // {
-    //     chip8->sound_timer_acc += dt;
-    //     if (dt >= SIXTY_HZU)
-    //     {
-    //         printf("BEEP!\n");
-    //         chip8->sound_timer--;
-    //         chip8->sound_timer_acc = 0;
-    //     }
-    // }
+    
 }
 
 void chip8_clear_display(struct chip8 *chip8)
