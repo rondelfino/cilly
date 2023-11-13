@@ -24,10 +24,11 @@ typedef enum
     Idle
 } keystate;
 
-/* Opcode function pointer type for opcode tables */
-typedef void (*opcode_func)();
+struct chip8;
 
-/* State the CHIP8 machine */
+/* Opcode function pointer type for opcode tables */
+typedef void (*opcode_func)(struct chip8 *);
+
 struct chip8
 {
     /* Default number of unique addresses is 2^12(4096) in a CHIP8 interpreter because it used 12-bit addressing */
@@ -46,18 +47,18 @@ struct chip8
     uint16_t stack[STACK_SIZE];
     uint8_t SP; /* Point to top of stack */
 
-    uint8_t delay_timer; /* Delay timer register */
-    uint8_t sound_timer; /* Sound timer register */
+    uint8_t delay_timer;      /* Delay timer register */
+    uint8_t sound_timer;      /* Sound timer register */
+    uint64_t delay_timer_acc; /* Tracks change in time to decrement delay timer at 60 Hz */
+    uint64_t sound_timer_acc; /* Tracks change in time to decrement sound timer at 60 Hz */
 
     uint8_t V[REGISTER_COUNT]; /* General purpose registers: V0 -> VF */
 
     uint16_t opcode; /* Current opcode to be decoded and executed */
 
     uint8_t keypad[KEY_COUNT]; /* Set to 0 if idle, 1 if key is pressed, 2 if key is released */
- 
-    uint8_t draw_flag; /* Update screen when not 0 */
 
-    uint8_t running; /* Set to 1 if the emulator is running, 0 otherwise */
+    uint8_t draw_flag; /* Update screen when not 0 */
 
     /*  Opcode function pointer tables
      *  the opcode id (the first nibble) indexes into the corresponding table
@@ -89,7 +90,8 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address);
 void chip8_load_rom(struct chip8 *chip8, const char *filename);
 /* Load default fontset to memory */
 void chip8_load_fontset(struct chip8 *chip8);
-/* Emulate CHIP8 instruction cycle */
+/* Emulate CHIP8 instruction cycle
+ * @param dt */
 void chip8_cycle(struct chip8 *chip8);
 /* Set all pixels on screen to 0 */
 void chip8_clear_display(struct chip8 *chip8);

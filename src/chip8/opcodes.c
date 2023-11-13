@@ -1,5 +1,4 @@
 #include "chip8.h"
-#include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -7,27 +6,27 @@
 void table0(struct chip8 *chip8)
 {
     /* Index into table using fourth nibble */
-    chip8->table0[chip8->opcode & 0xF]();
+    chip8->table0[chip8->opcode & 0xF](chip8);
 }
 void table8(struct chip8 *chip8)
 {
-    chip8->table8[chip8->opcode & 0xF]();
+    chip8->table8[chip8->opcode & 0xF](chip8);
 }
 void tableE(struct chip8 *chip8)
 {
-    chip8->tableE[chip8->opcode & 0xF]();
+    chip8->tableE[chip8->opcode & 0xF](chip8);
 }
 void tableF(struct chip8 *chip8)
 {
     /* Index into table using 3rd, 4th nibble */
-    chip8->tableF[chip8->opcode & 0xFF]();
+    chip8->tableF[chip8->opcode & 0xFF](chip8);
 }
 
 /* Opcodes */
 void op_NULL(struct chip8 *chip8)
 {
     printf("Fatal Error: Opcode 0x%04x is unknown or incompatible. Please load a compatible rom.\n", chip8->opcode);
-    chip8->running = 0;
+    exit(EXIT_FAILURE);
 }
 void op_00E0(struct chip8 *chip8)
 {
@@ -42,22 +41,17 @@ void op_1NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
 
-    // printf("Executing opcode 0x%04x (jump to address) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
-
     chip8->PC = address;
 }
 void op_2NNN(struct chip8 *chip8)
 {
     uint16_t address = chip8->opcode & 0xFFF;
 
-    // printf("Executing opcode 0x%04x (call subroutine) at memory address 0x%04x\n", chip8->opcode, chip8->PC);
-
     if (chip8->SP >= STACK_SIZE)
     {
         // Debug information for stack overflow
-        // printf("Stack overflow detected. Terminating program.\n");
-        chip8->running = 0;
-        return;
+        printf("Stack overflow detected. Terminating program.\n");
+        exit(EXIT_FAILURE);
     }
 
     chip8->stack[chip8->SP] = chip8->PC;
@@ -68,9 +62,6 @@ void op_3XNN(struct chip8 *chip8)
 {
     uint8_t x = (chip8->opcode >> 8) & 0xF;
     uint8_t nn = chip8->opcode & 0xFF;
-
-    // printf("Executing opcode 0x3%X%02X: Skip next instruction if V%X (%d) == 0x%02X (%d)\n", x, nn, x, chip8->V[x],
-    // nn, chip8->V[x]);
 
     if (chip8->V[x] == nn)
         chip8->PC += 2;
@@ -112,8 +103,6 @@ void op_8XY0(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
 
     chip8->V[x] = chip8->V[y];
-    /* legacy */
-    chip8->V[0xF] = 0;
 }
 void op_8XY1(struct chip8 *chip8)
 {
@@ -237,8 +226,6 @@ void op_DXYN(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
     uint8_t n = chip8->opcode & 0xF;
 
-    // printf("Executing opcode 0xD%X%0X: Draw sprite from V%X to V%X, height: %d\n", x, y, x, y, n);
-
     /* Cap to the dimensions of the display buffer */
     uint8_t x_pos = chip8->V[x] % DISPLAY_WIDTH;
     uint8_t y_pos = chip8->V[y] % DISPLAY_HEIGHT;
@@ -247,12 +234,20 @@ void op_DXYN(struct chip8 *chip8)
     /* Draw sprite from address in I to N */
     for (size_t row = 0; row < n; row++)
     {
+        /* Stop drawing if bottom edge is reached */
+        if (y_pos + row >= DISPLAY_HEIGHT)
+            break;
+
         /* Extract byte at current row */
         uint8_t sprite_byte = chip8->memory[chip8->I + row];
 
         /* Iterate over extracted byte */
         for (size_t col = 0; col < 8; col++)
         {
+            /* Stop drawing if right edge is reached */
+            if (x_pos + col >= DISPLAY_WIDTH)
+                break;
+
             /* Extract current bit */
             uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 0x1;
             /* Get current pixel value from display buffer */
@@ -269,14 +264,7 @@ void op_DXYN(struct chip8 *chip8)
                 /* Set display pixel if it's currently 0, or unset it if it's currently 1 */
                 *display_pixel ^= 1;
             }
-
-            /* Stop drawing if right edge is reached */
-            if (x_pos + col >= DISPLAY_WIDTH)
-                break;
         }
-        /* Stop drawing if bottom edge is reached */
-        if (y_pos + row >= DISPLAY_HEIGHT)
-            break;
     }
 }
 

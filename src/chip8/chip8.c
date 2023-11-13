@@ -4,34 +4,24 @@
 #include <string.h>
 #include <time.h>
 
-// #define SIXTY_HZ (1.0 / 60.0) * 1000
+/* Time interval between each cycle at 60 hz in microseconds
+ * used for timers */
+#define SIXTY_HZU (1.0 / 60.0) * 1000000
 
 void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
 {
-    /* Init chip8 fields:
-        Clear display
-        Clear stack
-        Clear registers V0-VF
-        Clear memory */
-    // chip8_clear_display(chip8);
+    /* Init chip8 fields */
     memset(chip8, 0, sizeof(struct chip8));
-    // memset(chip8->stack, 0x0000, STACK_SIZE * sizeof(uint16_t));
-    // memset(chip8->V, 0x00, REGISTER_COUNT * sizeof(uint8_t));
-    // memset(chip8->memory, 0x00, MAX_MEMORY * sizeof(uint8_t));
-    // memset(chip8->keypad, 0x00, KEY_COUNT * sizeof(uint8_t));
-    // chip8->I = 0x00;
-    // chip8->SP = 0;
-    // chip8->delay_timer = 0;
-    // chip8->sound_timer = 0;
-    // chip8->draw_flag = 0;
-    // chip8_load_fontset(chip8);
     chip8->PC = pc_start_address;
+    chip8_load_fontset(chip8);
 
     /* Init seed */
     srand(time(NULL));
-    printf("Seed: %ld\n", time(NULL));
 
     /* Setup function pointer tables */
+    for (size_t i = 0; i <= 0xF; i++)
+        chip8->main_table[i] = op_NULL;
+
     chip8->main_table[0x0] = table0;
     chip8->main_table[0x1] = op_1NNN;
     chip8->main_table[0x2] = op_2NNN;
@@ -73,12 +63,10 @@ void chip8_init(struct chip8 *chip8, uint16_t pc_start_address)
     chip8->tableE[0xE] = op_EX9E;
 
     for (size_t i = 0; i <= 0x65; i++)
-    {
         chip8->tableF[i] = op_NULL;
-    }
 
-    chip8->tableF[0x7] = op_FX07;
-    chip8->tableF[0xA] = op_FX0A;
+    chip8->tableF[0x07] = op_FX07;
+    chip8->tableF[0x0A] = op_FX0A;
     chip8->tableF[0x15] = op_FX15;
     chip8->tableF[0x18] = op_FX18;
     chip8->tableF[0x1E] = op_FX1E;
@@ -101,13 +89,9 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
 
         if (rom_size > 0)
         {
-            if (rom_size <= MAX_MEMORY - START_ADDRESS)
+            if (rom_size <= MAX_MEMORY)
             {
-                /* Pointer to buffer starting at start address
-                   Size of the object to be stored
-                   Count of the object
-                   The stream/source to read */
-                fread(chip8->memory + START_ADDRESS, MAX_MEMORY - START_ADDRESS, 1, rom);
+                fread(chip8->memory + chip8->PC, 1, rom_size, rom);
             }
             else
             {
@@ -126,7 +110,7 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
     }
     else
     {
-        // Handle file opening error
+        /* Handle file opening error */
         printf("Error: Failed to open the ROM file.\n");
         exit(EXIT_FAILURE);
     }
@@ -135,13 +119,13 @@ void chip8_load_rom(struct chip8 *chip8, const char *filename)
 void chip8_load_fontset(struct chip8 *chip8)
 {
     /* Represents hex characters as 5x4 sprites
-    Each byte represents a row for its repsective hex character
-      F:
-      11110000
-      10000000
-      11110000
-      10000000
-      10000000 */
+     * Each byte represents a row for its repsective hex character
+     * F:
+     * 11110000
+     * 10000000
+     * 11110000
+     * 10000000
+     * 10000000 */
     uint8_t fontset[] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -185,30 +169,10 @@ void chip8_cycle(struct chip8 *chip8)
     chip8->opcode |= chip8->memory[chip8->PC + 1];
 
     /* Point to next opcode */
-    if (chip8->PC >= START_ADDRESS && chip8->PC <= 0xFFF)
-        chip8->PC += 2;
-    else
-    {
-        printf("Error: Invalid memory access at address 0x%04X\n", chip8->PC);
-        exit(EXIT_FAILURE);
-    }
+    chip8->PC += 2;
 
-    /* Decode and execute */
-    chip8->main_table[(chip8->opcode >> 12) & 0xF]();
-    // printf("Executing opcode 0x%04X at memory address 0x%04X\n", chip8->opcode, chip8->PC);
-
-    // printf("0x%04x\n", chip8->opcode);
-
-    /* Decrement by 1, 60 times per second */
-    /* if dt > 1/60th of a second, decrement timers */
-    // if (chip8->delay_timer > 0)
-    //     chip8->delay_timer--;
-
-    // if (chip8->sound_timer > 0)
-    // {
-    // printf("BEEP!\n");
-    // chip8->sound_timer--;
-    // }
+    /* Decode and execute - index with opcode group id (first nibble) */
+    chip8->main_table[(chip8->opcode >> 12) & 0xF](chip8);
 
     /* Set released keys to idle */
     chip8_reset_released_keys(chip8);
