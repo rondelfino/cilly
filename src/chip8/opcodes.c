@@ -1,5 +1,4 @@
 #include "chip8.h"
-#include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -104,8 +103,6 @@ void op_8XY0(struct chip8 *chip8)
     uint8_t y = (chip8->opcode >> 4) & 0xF;
 
     chip8->V[x] = chip8->V[y];
-    /* legacy */
-    chip8->V[0xF] = 0;
 }
 void op_8XY1(struct chip8 *chip8)
 {
