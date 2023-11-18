@@ -177,6 +177,6 @@ $(BUILD_DIR)/%.json: $(SRC_DIR)/%.c
 	@printf "\
 	{\n\
 	    \"directory\": \"$(CURDIR)\",\n\
-	    \"command\": \"$(CC) $.cFLAGS) $(CFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
+	    \"command\": \"$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
 	    \"file\": \"$<\"\n\
 	}\n" > $@
