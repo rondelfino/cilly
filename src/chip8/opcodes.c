@@ -25,7 +25,9 @@ void tableF(struct chip8 *chip8)
 /* Opcodes */
 void op_NULL(struct chip8 *chip8)
 {
-    printf("Fatal Error: Opcode 0x%04x is unknown or incompatible. Please load a compatible rom.\n", chip8->opcode);
+    printf("Fatal Error: Opcode 0x%04x is unknown or incompatible with the chosen platform. Please load a compatible "
+           "rom.\n",
+           chip8->opcode);
     exit(EXIT_FAILURE);
 }
 void op_00E0(struct chip8 *chip8)

@@ -1,11 +1,11 @@
 #pragma once
 
+#ifndef PLATFORM_LAYER_H
+#define PLATFORM_LAYER_H
+
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <stdint.h>
-
-#ifndef PLATFORM_LAYER_H
-#define PLATFORM_LAYER_H
 
 /* X11 window */
 struct window
@@ -27,7 +27,7 @@ void platform_destroy_window(struct window *window);
 /* Processes input
   @return return 0 if an escape key is pressed */
 uint8_t platform_process_input(struct window *window, uint8_t *keypad);
-/* Get corresponding keypad key from given keycode 
+/* Get corresponding keypad key from given keycode
  * @return return keypad hex value if input is valid */
 uint8_t platform_get_key_from_keycode(KeyCode keycode);
 /* Copies data from given buffer to screen */
