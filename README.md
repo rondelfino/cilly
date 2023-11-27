@@ -14,6 +14,7 @@
 - [ ] GUI rom loading, setting clock, manually setting quirks, and choosing platform
 
 # Resources
+- [Benchmark Program](https://github.com/Milk-Cool/chip8-benchmark)
 - https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908#chip-8-instructions
 - https://johnearnest.github.io/Octo/docs/SuperChip.html
 - https://chip-8.github.io/links/#testing
