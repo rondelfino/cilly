@@ -1,5 +1,5 @@
 # cilly
-     A CHIP8 interpreter
+> A CHIP8 interpreter
 *Currently only compatible with games written in the original CHIP8 instruction set*
 ## Build From Source
 ### Building Prequisites
