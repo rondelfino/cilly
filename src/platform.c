@@ -2,130 +2,102 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define KEY_ESCAPE 9
-#define KEY_1 10
-#define KEY_2 11
-#define KEY_3 12
-#define KEY_4 13
+#define INVALID_KEY -1
 
-#define KEY_Q 24
-#define KEY_W 25
-#define KEY_E 26
-#define KEY_R 27
-
-#define KEY_A 38
-#define KEY_S 39
-#define KEY_D 40
-#define KEY_F 41
-
-#define KEY_Z 52
-#define KEY_X 53
-#define KEY_C 54
-#define KEY_V 55
-
-#define INVALID_KEY 0x69
-
-void platform_create_window(struct window *window)
+void platform_init(struct window *window)
 {
-    /* Establish connect to the X server */
-    window->dpy = XOpenDisplay(NULL);
-    if (!window->dpy)
+    // int8_t success = 0;
+    window->w = NULL;
+
+    /* return -1 if fails */
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
     {
-        /* Handle error */
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "SDL initialization failed. Error: %s\n", SDL_GetError());
     }
+    else
+    {
+        /* get native resolution */
+        SDL_DisplayMode DM;
+        SDL_GetCurrentDisplayMode(0, &DM);
+        uint16_t screen_width = DM.w;
 
-    window->scr = DefaultScreen(window->dpy);
+        /* adjust window resolution to 2:1 */
+        window->w = SDL_CreateWindow("Cilly", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width / 3,
+                                     (screen_width / 3) / 2, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
 
-    window->background_col = BlackPixel(window->dpy, window->scr);
-    window->foreground_col = WhitePixel(window->dpy, window->scr);
+        if (!window->w)
+        {
+            fprintf(stderr, "Window could not be created. Error: %s\n", SDL_GetError());
+        }
 
-    uint16_t screen_width = DisplayWidth(window->dpy, window->scr);
-    uint16_t screen_height = DisplayHeight(window->dpy, window->scr);
-
-    /* Default window start pos in the center of the screen */
-    uint16_t window_x = (screen_width - (screen_width / 2)) / 2;
-    uint16_t window_y = (screen_height - (screen_height / 2)) / 2;
-
-    window->w = XCreateSimpleWindow(window->dpy, RootWindow(window->dpy, window->scr), window_x, window_y,
-                                    screen_width / 3, (screen_width / 3) / 2, 0, window->background_col, window->foreground_col);
-
-    XStoreName(window->dpy, window->w, "Cilly");
-    XMapWindow(window->dpy, window->w);
-
-    /* Events window will receive */
-    XSelectInput(window->dpy, window->w,
-                 ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-                     StructureNotifyMask);
-
-    window->gc = XCreateGC(window->dpy, window->w, 0, NULL);
-    /* Get dimensions of window */
-    XWindowAttributes wa;
-    XGetWindowAttributes(window->dpy, window->w, &wa);
-    window->width = wa.width;
-    window->height = wa.height;
+        window->renderer = SDL_CreateRenderer(window->w, -1, 0);
+        if (!window->renderer)
+        {
+            fprintf(stderr, "Renderer could not be created. Error: %s\n", SDL_GetError());
+        }
+    }
 }
 
-void platform_destroy_window(struct window *window)
+void platform_close(struct window *window)
 {
-    XFreeGC(window->dpy, window->gc);
-    XDestroyWindow(window->dpy, window->w);
-    XCloseDisplay(window->dpy);
+    SDL_DestroyWindow(window->w);
+    SDL_DestroyRenderer(window->renderer);
+    SDL_Quit();
 }
 
-uint8_t platform_get_key_from_keycode(KeyCode keycode)
+uint8_t platform_get_key_from_keycode(SDL_KeyCode keycode)
 {
     switch (keycode)
     {
-    case KEY_1:
+    case SDLK_1:
         return 0x1;
         break;
-    case KEY_2:
+    case SDLK_2:
         return 0x2;
         break;
-    case KEY_3:
+    case SDLK_3:
         return 0x3;
         break;
-    case KEY_4:
+    case SDLK_4:
         return 0xC;
         break;
 
-    case KEY_Q:
+    case SDLK_q:
         return 0x4;
         break;
-    case KEY_W:
+    case SDLK_w:
         return 0x5;
         break;
-    case KEY_E:
+    case SDLK_e:
         return 0x6;
         break;
-    case KEY_R:
+    case SDLK_r:
         return 0xD;
         break;
 
-    case KEY_A:
+    case SDLK_a:
         return 0x7;
         break;
-    case KEY_S:
+    case SDLK_s:
         return 0x8;
         break;
-    case KEY_D:
+    case SDLK_d:
         return 0x9;
         break;
-    case KEY_F:
+    case SDLK_f:
         return 0xE;
         break;
 
-    case KEY_Z:
+    case SDLK_z:
         return 0xA;
         break;
-    case KEY_X:
+    case SDLK_x:
         return 0x0;
         break;
-    case KEY_C:
+    case SDLK_c:
         return 0xB;
         break;
-    case KEY_V:
+    case SDLK_v:
         return 0xF;
         break;
     default:
@@ -134,52 +106,38 @@ uint8_t platform_get_key_from_keycode(KeyCode keycode)
     }
 }
 
-uint8_t platform_process_input(struct window *window, uint8_t *keypad)
+int8_t platform_process_input(uint8_t *keypad)
 {
-    uint8_t running = 1;
-    while (XPending(window->dpy))
+    int8_t running = 1;
+
+    SDL_Event e;
+    while (SDL_PollEvent(&e))
     {
-        XNextEvent(window->dpy, &window->e);
-
-        /* Get the symbolic representation of the current key */
-        KeySym keysym = XLookupKeysym(&window->e.xkey, 0);
-        /* Convert it to a keycode */
-        KeyCode keycode = XKeysymToKeycode(window->dpy, keysym);
-        /* Get the corresponding key for the current keycode */
-        uint8_t key = platform_get_key_from_keycode(keycode);
-
-        /* Set on key press */
-        switch (window->e.type)
+        switch (e.type)
         {
-        case KeyPress:
-            if (keycode == KEY_ESCAPE)
-            {
-                running = 0;
-                break;
-            }
-            /* Ensure the key pressed is a valid key */
-            if (key != INVALID_KEY)
-                keypad[key] = 1;
+        case SDL_QUIT:
+            running = -1;
             break;
+        case SDL_KEYDOWN: {
+            /* Get the corresponding key for the current keycode */
+            SDL_Keycode keycode = e.key.keysym.sym;
+            int8_t key = platform_get_key_from_keycode(keycode);
 
-        case KeyRelease:
-            if (XEventsQueued(window->dpy, QueuedAfterReading))
-            {
-                XEvent next_e;
-                XPeekEvent(window->dpy, &next_e);
-
-                /* Check if key is being held */
-                /* This is necessary to prevent auto repeating keys
-                 * Ommitting this  will cause the X server to send KeyRelease events after KeyPress events while the key
-                 * is held */
-                if (next_e.type == KeyPress && next_e.xkey.time == window->e.xkey.time &&
-                    next_e.xkey.keycode == window->e.xkey.keycode)
-                    /* Key wasn’t actually released */
-                    continue;
-            }
+            if (keycode == SDLK_ESCAPE)
+                running = 0;
+            else if (key != INVALID_KEY)
+                /* key pressed */
+                keypad[key] = 1;
+        }
+        break;
+        case SDL_KEYUP: {
+            /* Get the corresponding key for the current keycode */
+            int8_t key = platform_get_key_from_keycode(e.key.keysym.sym);
             if (key != INVALID_KEY)
                 keypad[key] = 2;
+
             break;
+        }
         }
     }
     return running;
@@ -187,22 +145,20 @@ uint8_t platform_process_input(struct window *window, uint8_t *keypad)
 
 void platform_update(struct window *window, uint8_t *display_buffer, uint8_t display_width, uint8_t display_height)
 {
-    /* If window size changes get new dimensions */
-    if (window->e.type == ConfigureNotify || window->e.type == Expose)
+    SDL_Rect rect;
+    uint16_t min_scale;
+
+    /* Calculate minimum scale */
+    if (SDL_GetWindowFlags(window->w) & SDL_WINDOW_RESIZABLE)
     {
-        /* Get window attribute to scale sprites based on window size */
-        XWindowAttributes wa;
-        XGetWindowAttributes(window->dpy, window->w, &wa);
-
-        window->width = wa.width;
-        window->height = wa.height;
+        int w, h;
+        SDL_GetWindowSize(window->w, &w, &h);
+        min_scale = SDL_min(w / display_width, h / display_height);
     }
-
-    uint16_t x_scale = window->width / display_width;
-    uint16_t y_scale = window->height / display_height;
-
-    /* Maintain 2:1 aspect ratio */
-    uint16_t min_scale = (x_scale < y_scale) ? x_scale : y_scale;
+    else
+    {
+        min_scale = 1; // Or any other default scale
+    }
 
     for (uint8_t y = 0; y < display_height; y++)
     {
@@ -211,16 +167,22 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint8_t dis
 
         for (uint8_t x = 0; x < display_width; x++)
         {
-            if (display_buffer[y * display_width + x])
-                XSetForeground(window->dpy, window->gc, window->foreground_col);
-            else
-                XSetForeground(window->dpy, window->gc, window->background_col);
-
             uint16_t x_scaled_pos = x * min_scale;
             uint16_t rect_w = (x + 1) * min_scale - x_scaled_pos;
 
-            XFillRectangle(window->dpy, window->w, window->gc, x_scaled_pos, y_scaled_pos, rect_w, rect_h);
+            rect.x = x_scaled_pos;
+            rect.y = y_scaled_pos;
+            rect.w = rect_w;
+            rect.h = rect_h;
+
+            if (display_buffer[y * display_width + x])
+                SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+            else
+                SDL_SetRenderDrawColor(window->renderer, 0, 0, 0, 255);
+
+            SDL_RenderFillRect(window->renderer, &rect);
         }
     }
-    XFlush(window->dpy);
+
+    SDL_RenderPresent(window->renderer);
 }

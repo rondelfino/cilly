@@ -25,7 +25,7 @@ WARNINGS = -Wall -Wpedantic -Wextra
 LDFLAGS =
 
 # Libraries to link
-LDLIBS = -lX11
+LDLIBS = -lSDL2
 
 # Target OS detection
 ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
