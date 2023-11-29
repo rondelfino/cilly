@@ -148,7 +148,8 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint8_t dis
     SDL_Rect rect;
     uint16_t min_scale;
 
-    /* Calculate minimum scale */
+    /* TODO: change this to calculate only when window is resized. might need SDL_Event and min_scale in the window struct */
+    /* calculate minimum scale */
     if (SDL_GetWindowFlags(window->w) & SDL_WINDOW_RESIZABLE)
     {
         int w, h;
@@ -157,7 +158,7 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint8_t dis
     }
     else
     {
-        min_scale = 1; // Or any other default scale
+        min_scale = 1;
     }
 
     for (uint8_t y = 0; y < display_height; y++)
