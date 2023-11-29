@@ -18,7 +18,10 @@ CPPFLAGS = $(INCLUDES) -MMD -MP
 
 # C compiler settings
 CC = gcc
-CFLAGS = 
+ifeq ($(arch),32)
+	CFLAGS = -m32
+	LDFLAGS = -m32
+endif
 WARNINGS = -Wall -Wpedantic -Wextra
 
 # Linker flags
@@ -43,25 +46,34 @@ endif
 
 # OS-specific settings
 ifeq ($(OS),windows)
-	# Link libgcc and libstdc++ statically on Windows
-	LDFLAGS += -static-libgcc -static-libstdc++
-
 	# Windows 32- and 64-bit common settings
 	INCLUDES +=
-	LDFLAGS +=
-	LDLIBS +=
+	LDFLAGS += -mwindows
+	LDLIBS += -lmingw32 -lSDL2main
 
-	ifeq ($(win32),1)
-		# Windows 32-bit settings
-		INCLUDES +=
-		LDFLAGS +=
-		LDLIBS +=
+	# Checks if windows is 32-bit or 32-bit compilation is set
+	ifeq ($(arch),32)
+		ifeq ($(CC),gcc)
+			INCLUDES +=
+			LDFLAGS += -Llibs/gcc32/
+			LDLIBS +=
+		else ifeq ($(CC),clang)
+			INCLUDES +=
+			LDFLAGS += -Llibs/clang32/
+			LDLIBS +=
+		endif
 	else
-		# Windows 64-bit settings
-		INCLUDES +=
-		LDFLAGS +=
-		LDLIBS +=
+		ifeq ($(CC),gcc)
+			INCLUDES +=
+			LDFLAGS += -Llibs/gcc/
+			LDLIBS +=
+		else ifeq ($(CC),clang)
+			INCLUDES +=
+			LDFLAGS += -Llibs/clang/
+			LDLIBS +=
+		endif
 	endif
+
 else ifeq ($(OS),macos)
 	# macOS-specific settings
 	INCLUDES +=
@@ -74,29 +86,14 @@ else ifeq ($(OS),linux)
 	LDLIBS +=
 endif
 
-
-# Windows-specific default settings
-ifeq ($(OS),windows)
-	# Add .exe extension to executable
-	EXEC := $(EXEC).exe
-
-	ifeq ($(win32),1)
-		# Compile for 32-bit
-		CFLAGS += -m32
-	else
-		# Compile for 64-bit
-		CFLAGS += -m64
-	endif
-endif
-
 # OS-specific build, bin, and assets directories
 BUILD_DIR := $(BUILD_DIR_ROOT)/$(OS)
 BIN_DIR := $(BIN_DIR_ROOT)/$(OS)
 ifeq ($(OS),windows)
 	# Windows 32-bit
-	ifeq ($(win32),1)
+	ifeq ($(arch),32)
 		BUILD_DIR := $(BUILD_DIR)32
-		BIN_DIR := $(BIN_DIR)32
+		BIN_DIR := $(BIN_DIR)32		
 	# Windows 64-bit
 	else
 		BUILD_DIR := $(BUILD_DIR)64
@@ -132,7 +129,7 @@ $(BIN_DIR)/$(EXEC): $(OBJS)
 	@mkdir -p $(@D)
 	@$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-# Compile C++ source files
+# Compile source files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@echo "Compiling: $<"
 	@mkdir -p $(@D)
@@ -180,3 +177,24 @@ $(BUILD_DIR)/%.json: $(SRC_DIR)/%.c
 	    \"command\": \"$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
 	    \"file\": \"$<\"\n\
 	}\n" > $@
+
+
+# Print help information
+.PHONY: help
+help:
+	@printf "\
+	Usage: make target... [options]...\n\
+	\n\
+	Targets:\n\
+	  all             Build executable (debug mode by default) (default target)\n\
+	  install         Install packaged program to desktop (debug mode by default)\n\
+	  run             Build and run executable (debug mode by default)\n\
+	  clean           Clean build and bin directories (all platforms)\n\
+	  compdb          Generate JSON compilation database (compile_commands.json)\n\
+	  help            Display help information\n\
+	\n\
+	Options:\n\
+	  release=1       Run target using release configuration rather than debug\n\
+	  arch=32         Build in 32-bit mode\n\
+	\n\
+	"

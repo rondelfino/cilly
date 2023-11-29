@@ -4,17 +4,54 @@
 *Currently only compatible with games written in the original CHIP8 instruction set*
 ## Build From Source
 ### Building Prequisites
-- gcc or clang
-- SDL2
-- Make
+<details>
+    <summary>Windows</summary>
+
+    - [MSYS2 MinGW Toolchain](https://www.msys2.org/)
+    - gcc or clang
+    - SDL2
+    - Make
+
+## How to use MSYS to build
+After installation, launch the following environment and install the respective packages by prepending the packages with `pacman -S`:
+| Compiler | Architecture | Environment | Packages |
+| -------- | ------------ | ----------- | -------- |
+| :-gcc-:  |  :-32-bit-:  | :-MINGW32-: | [mingw-w64-i686-gcc](https://packages.msys2.org/package/mingw-w64-i686-gcc?repo=mingw32) </br> [mingw-w64-i686-SDL2](https://packages.msys2.org/package/mingw-w64-i686-SDL2?repo=mingw32) |
+| :-gcc-:  |  :-64-bit-:  |  :-UCRT64-: | [mingw-w64-ucrt-x86_64-gcc](https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-gcc?repo=ucrt64) </br> [mingw-w64-ucrt-x86_64-SDL2](https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-SDL2?repo=ucrt64) |
+| clang | 32-bit | CLANG64 | [mingw-w64-clang-i686-clang](https://packages.msys2.org/package/mingw-w64-clang-i686-clang?repo=clang32) </br> [mingw-w64-clang-i686-SDL2](https://packages.msys2.org/package/mingw-w64-clang-i686-SDL2?repo=clang32) |
+| clang | 64-bit | CLANG64/UCRT64 | Using UCRT64: </br> [mingw-w64-ucrt-x86_64-clang](https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-clang?repo=ucrt64) </br> [mingw-w64-ucrt-x86_64-SDL2](https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-SDL2?repo=ucrt64) </br> Using CLANG64: </br> [mingw-w64-x86_64-clang](https://packages.msys2.org/package/mingw-w64-x86_64-clang?repo=mingw64) </br> [mingw-w64-x86_64-SDL2](https://packages.msys2.org/package/mingw-w64-x86_64-SDL2?repo=mingw64) |
+
+Also install git and make:
+```
+pacman -S git make
+```
+Clone the source directory to your desired location:
+```
+git clone https://github.com/rondelfino/cilly.git
+```
+</details>
+
+<details>
+    <summary>Linux</summary>    
+
+    - gcc or clang
+    - SDL2
+    - Make
+
+</details>
+
 ### Compiling
-Compile in debug mode:
+Default compilation is in debug and 64-bit mode:
 ```
 make
 ```
-Or compile in release mode:
+Compile in release mode:
 ```
 make release=1 
+```
+Compile in 32-bit mode:
+```
+make arch=32
 ```
 The default compiler is gcc. If you want to use clang:
 ```
@@ -23,7 +60,11 @@ make CC=clang
 ### Usage
 *only bash commands shown for brevity*
 ```
-./bin/[OS]/[build mode]/cilly [clock speed in Hz] [path/to/rom]
+./bin/[OS]/[build-mode]/cilly [clock-speed-in-Hz] [path/to/rom]
+```
+Or:
+```
+make run [clock-speed-in-hz] [path/to/rom]
 ```
 ## TODO
 - [x] Wayland/Win32 or SDL
