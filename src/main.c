@@ -2,7 +2,35 @@
 #include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <time.h>
+#endif
+
+#ifdef _WIN32
+void get_current_time(LARGE_INTEGER *time)
+{
+    QueryPerformanceCounter(time);
+}
+
+/* elapsed time in microseconds */
+double get_elapsed_time(LARGE_INTEGER start, LARGE_INTEGER end, LARGE_INTEGER frequency)
+{
+    return (double)(end.QuadPart - start.QuadPart) * 1000000.0 / frequency.QuadPart;
+}
+#else
+void get_current_time(struct timespec *time)
+{
+    clock_gettime(CLOCK_MONOTONIC, time);
+}
+
+double get_elapsed_time(struct timepsec start, struct timespec end)
+{
+    return (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000.0;
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -28,52 +56,45 @@ int main(int argc, char **argv)
     chip8_load_rom(&chip8, filename);
 
     /* setup cycle timers */
-    struct timespec current_time;
-    struct timespec new_time;
-    clock_gettime(CLOCK_MONOTONIC, &current_time);
-    double dt = 0;
+#ifdef _WIN32
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER current_time, new_time;
+    QueryPerformanceFrequency(&frequency);
+#else
+    struct timespec current_time, new_time;
+#endif
 
-    /* setup delay/sound timer timers */
-    struct timespec current_time_timer;
-    struct timespec new_time_timer;
-    clock_gettime(CLOCK_MONOTONIC, &current_time_timer);
+    double dt = 0;
+    double dt_refresh = 0;
     double dt_timer = 0;
 
-    /* setup refresh timers */
-    struct timespec update_start;
-    struct timespec update_end;
-    clock_gettime(CLOCK_MONOTONIC, &update_start);
-    double dt_refresh = 0;
+    get_current_time(&current_time);
 
     /* TODO: maybe add running to the window struct? */
     uint8_t running = 1;
     while (running)
     {
-        clock_gettime(CLOCK_MONOTONIC, &new_time);
+        get_current_time(&new_time);
 
-        clock_gettime(CLOCK_MONOTONIC, &new_time_timer);
-
-        clock_gettime(CLOCK_MONOTONIC, &update_end);
-
-        /* Calculate dt in microseconds */
-        dt += (new_time.tv_sec - current_time.tv_sec) * 1000000 + (new_time.tv_nsec - current_time.tv_nsec) / 1000.0;
-
-        dt_timer += (new_time_timer.tv_sec - current_time_timer.tv_sec) * 1000000 +
-                    (new_time_timer.tv_nsec - current_time_timer.tv_nsec) / 1000.0;
-
-        dt_refresh +=
-            (update_end.tv_sec - update_start.tv_sec) * 1000000 + (update_end.tv_nsec - update_start.tv_nsec) / 1000.0;
+#ifdef _WIN32
+        dt += get_elapsed_time(current_time, new_time, frequency);
+        dt_refresh += get_elapsed_time(current_time, new_time, frequency);
+        dt_timer += get_elapsed_time(current_time, new_time, frequency);
+#else
+        dt += get_elapsed_time(current_time, new_time);
+        dt_refresh += get_elapsed_time(current_time, new_time);
+        dt_timer += get_elapsed_time(current_time, new_time);
+#endif
 
         current_time = new_time;
         while (dt >= cycle_time)
         {
             chip8_cycle(&chip8);
-
             dt -= cycle_time;
         }
 
-        update_start = update_end;
         /* TODO: symbolic constant 60 hz */
+        /* refresh rate 45 Hz */
         if (dt_refresh >= 1000000.0 / 60.0)
         {
             running = platform_process_input(chip8.keypad);
@@ -87,7 +108,6 @@ int main(int argc, char **argv)
 
         /* Decrement by 1, 60 times per second */
         /* if dt > 1/60th of a second, decrement timers */
-        current_time_timer = new_time_timer;
         if (dt_timer >= 1000000.0 / 60.0)
         {
             dt_timer -= 1000000.0 / 60.0;
