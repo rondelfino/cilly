@@ -18,14 +18,17 @@ CPPFLAGS = $(INCLUDES) -MMD -MP
 
 # C compiler settings
 CC = gcc
+
+# Linker flags
+LDFLAGS =
+
+CFLAGS =
 ifeq ($(arch),32)
 	CFLAGS = -m32
 	LDFLAGS = -m32
 endif
-WARNINGS = -Wall -Wpedantic -Wextra
 
-# Linker flags
-LDFLAGS =
+WARNINGS = -Wall -Wpedantic -Wextra
 
 # Libraries to link
 LDLIBS = -lSDL2
@@ -49,7 +52,7 @@ ifeq ($(OS),windows)
 	# Windows 32- and 64-bit common settings
 	INCLUDES +=
 	LDFLAGS += -mwindows
-	LDLIBS += -lmingw32 -lSDL2main
+	LDLIBS += -lmingw32 -lSDL2main 
 
 	# Checks if windows is 32-bit or 32-bit compilation is set
 	ifeq ($(arch),32)
@@ -92,8 +95,8 @@ BIN_DIR := $(BIN_DIR_ROOT)/$(OS)
 ifeq ($(OS),windows)
 	# Windows 32-bit
 	ifeq ($(arch),32)
-		BUILD_DIR := $(BUILD_DIR)32
-		BIN_DIR := $(BIN_DIR)32		
+		BUILD_DIR := $(BUILD_DIR)$(arch)
+		BIN_DIR := $(BIN_DIR)$(arch)
 	# Windows 64-bit
 	else
 		BUILD_DIR := $(BUILD_DIR)64
