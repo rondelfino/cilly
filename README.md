@@ -13,21 +13,17 @@
 - Make
 
 ## How to use MSYS to build
-After installation, launch the following environment and install the respective packages.
+After installation, launch the environment for your chosen compiler and target architecture, and install the listed packages.
 | Compiler | Architecture | Environment | Packages |
 | -------- | ------------ | ----------- | -------- |
 | gcc  |  32-bit  | MINGW32 | `pacman -S mingw-w64-i686-gcc mingw-w64-i686-SDL2`|
 | gcc  |  64-bit  |  UCRT64 | `pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-SDL2`|
 | clang | 32-bit | CLANG32 | `pacman -S mingw-w64-clang-i686-clang mingw-w64-clang-i686-SDL2`|
-| clang | 64-bit | CLANG64/UCRT64 | Using UCRT64: </br> `pacman -S mingw-w64-ucrt-x86_64-clang mingw-w64-ucrt-x86_64-SDL2`</br> Using CLANG64: </br> `pacman -S mingw-w64-x86_64-clang mingw-w64-clang-x86_64-SDL2`|
+| clang | 64-bit | CLANG64/UCRT64 | UCRT64: </br> `pacman -S mingw-w64-ucrt-x86_64-clang mingw-w64-ucrt-x86_64-SDL2`</br> CLANG64: </br> `pacman -S mingw-w64-x86_64-clang mingw-w64-clang-x86_64-SDL2`|
 
 Also install git and make:
 ```
 pacman -S git make
-```
-Now, clone the source directory to your desired location:
-```
-git clone https://github.com/rondelfino/cilly.git
 ```
 </details>
 
@@ -41,7 +37,12 @@ git clone https://github.com/rondelfino/cilly.git
 </details>
 
 ### Compiling
-Default compilation is in debug and 64-bit mode:
+Clone the repo and navigate to the directory:
+```
+git clone https://github.com/rondelfino/cilly.git
+cd cilly
+```
+Default compilation uses gcc, and is in debug 64-bit mode:
 ```
 make
 ```
@@ -53,12 +54,11 @@ Compile in 32-bit mode:
 ```
 make arch=32
 ```
-The default compiler is gcc. If you want to use clang:
+If you want to use clang:
 ```
 make CC=clang
 ```
 ### Usage
-*only bash commands shown for brevity*
 ```
 ./bin/[OS]/[build-mode]/cilly [clock-speed-in-Hz] [path/to/rom]
 ```
@@ -66,16 +66,19 @@ Or:
 ```
 make run [clock-speed-in-hz] [path/to/rom]
 ```
+
+`make help` to list available commands.
 ## TODO
 - [x] Wayland/Win32 or SDL
 - [Quirks](https://chip8.gulrak.net/#quirk11)
+- [ ] Makefile: add option to change packaged executable destination
 - [ ] Accurate COSMAC-VIP support ([opcode timings](https://jackson-s.me/2019/07/13/Chip-8-Instruction-Scheduling-and-Frequency.html))
 - [ ] SCHIP 1.1 support
 - [ ] XO-CHIP support
     - These platforms will automatically set the respective quirks
 - [ ] Flags to change change/set quirks manually
 - [ ] Debugger
-- [ ] GUI rom loading, setting clock, manually setting quirks, and choosing platform
+- [ ] GUI for rom loading, setting clock, manually setting quirks, and choosing platform
 
 ## Resources
 - [Benchmark Program](https://github.com/Milk-Cool/chip8-benchmark)
