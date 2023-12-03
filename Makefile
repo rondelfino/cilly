@@ -4,24 +4,24 @@ EXEC = cilly
 SRC_DIR = src
 BUILD_DIR_ROOT = build
 BIN_DIR_ROOT = bin
+EXTERNAL_DIR_ROOT = external
 INSTALL_DIR = .
+
 INCLUDE_DIR = include
 INCLUDES := $(INCLUDE_DIR)
 
-arch =
-
 # compiler
-CC =
-CFLAGS =
-CPPFLAGS =
-WARNINGS = 
+# CC =
+# CFLAGS =
+# CPPFLAGS =
+# WARNINGS = 
 
 # linker
-LDFLAGS =
-LIBS =
+# LDFLAGS =
+# LIBS =
 
 # target arch
-arch =
+# arch =
 
 UNAME := $(shell uname -s)
 # Target OS detection
@@ -32,8 +32,8 @@ ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
 	arch := $(strip $(shell wmic os get osarchitecture | FINDSTR bit))
 	
 	# Detect environment
-	# TODO: figure out how to do this
-	ifeq ($(shell echo $(UNAME) | grep -c "MINGW"),1)
+	# TODO: figure out how to do this without using ENV
+	ifneq (,$(findstring MINGW,$(UNAME)))
 		CC = gcc
 		ENV = mingw
 	else
@@ -41,6 +41,7 @@ ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
 		CC = cl
 	endif
 else
+	arch := $(strip $(shell uname -m | grep 64))
 	ifeq ($(UNAME),Darwin)
 		OS = macos
 		CC = clang
@@ -52,29 +53,18 @@ else
 	endif
 endif
 
-
-# Define shell commands and detect target architecture
+# Define shell commands
 ifeq ($(ENV),win)
 	RM = rmdir /s /q
 else
-	arch := $(strip $(shell uname -m))
 	RM = rm -rf
 endif
 
-# Detect target architecture
-ifeq ($(ENV),win)
-	# TODO: this is annoying fix this
-	ifeq ($(arch),32-bit)
-		arch = 32
-	else ifeq ($(arch),64-bit)
-		arch = 64
-	endif
-else 
-	ifeq ($(arch),x86)
-		arch = 32
-	else ifeq ($(arch),x86_64)
-		arch = 64
-	endif
+# Set arch
+ifneq (,$(findstring 64,$(arch)))
+	arch = 64
+else
+	arch = 32
 endif
 
 # Set OS-dependent flags
@@ -82,14 +72,10 @@ endif
 ifeq ($(ENV),win)
 	EXEC := $(EXEC).exe
 	SRCS := $(wildcard $(SRC_DIR)/*.c)
-	
 	CPPFLAGS = /I$(INCLUDES)
-	# WARNINGS = /W4
-	
 	LDFLAGS = /link
 else
 	SRCS := $(sort $(shell find $(SRC_DIR) -name '*.c'))
-	
 	WARNINGS = -Wall -Wextra -Wpedantic
 	CPPFLAGS = -I$(INCLUDES)
 endif
@@ -111,7 +97,7 @@ endif
 
 # OS-specific settings
 ifeq ($(OS),windows)
-	ifeq ($(CC),cl)
+	ifeq ($(ENV),win)
 		# Windows 32- and 64-bit common settings
 		# Required by SDL
 		LDFLAGS += /SUBSYSTEM:WINDOWS
@@ -125,38 +111,39 @@ ifeq ($(OS),windows)
 	ifeq ($(arch),32)
 		ifeq ($(CC),gcc)
 			INCLUDES +=
-			LDFLAGS += -Llibs/gcc32/
+			LDFLAGS += -Lexternal/SDL2/gcc/x86
 			LIBS +=
 		else ifeq ($(CC),clang)
 			INCLUDES +=
-			LDFLAGS += -Llibs/clang32/
+			LDFLAGS += -Lexternal/SDL2/clang/x86
 			LIBS +=
 		else
-			LDFLAGS += /LIBPATH:libs\cl\x86 
+			LDFLAGS += /LIBPATH:external\SDL2\cl\x86
 		endif
 	else
 		ifeq ($(CC),gcc)
 			INCLUDES +=
-			LDFLAGS += -Llibs/gcc/
+			LDFLAGS += -Lexternal/SDL2/gcc/x64
 			LIBS +=
 		else ifeq ($(CC),clang)
 			INCLUDES +=
-			LDFLAGS += -Llibs/clang/
+			LDFLAGS += -Lexternal/SDL2/gcc/x32
 			LIBS +=
 		else
-			LDFLAGS += /LIBPATH:libs\cl\x64 
+			LDFLAGS += /LIBPATH:external\SDL2\cl\x64		
 		endif
 	endif
 
 else ifeq ($(OS),macos)
 	# macOS-specific settings
 	INCLUDES +=
-	LDFLAGS += -mwindows
+	LDFLAGS += 
 	LIBS += -lSDL2
 else ifeq ($(OS),linux)
 	# Linux-specific settings
-	INCLUDES +=
-	LDFLAGS += -mwindows
+	INCLUDES += -I/usr/include/SDL2
+	CFLAGS += -D_REENTRANT
+	LDFLAGS += -L/usr/lib
 	LIBS += -lSDL2
 endif
 
@@ -236,13 +223,22 @@ endif
 # Packaged program
 $(INSTALL_DIR):
 ifeq ($(ENV),win)
-	if not exist "$(INSTSALL_DIR)" mkdir "$(INSTALL_DIR)"
+	if not exist "$(INSTALL_DIR)" mkdir "$(INSTALL_DIR)"
 else
 	mkdir -p $(INSTALL_DIR)
 endif
 
-# .PHONY: install
-# install: all
+.PHONY: install
+install: all copyextdeps | $(INSTALL_DIR)
+	@echo "Packaging program to $(INSTALL_DIR)"
+
+# Copies external dependencies to the executable's directory
+.PHONY: copyextdeps
+copyextdeps:
+ifeq ($(ENV),win)
+	cp /s /q $(EXTERNAL_ROOT_DIR)/$(OS)/$(CC)/$(arch)/*.dll $(BIN_DIR)/
+endif
+	
 
 .PHONY: clean
 clean:
