@@ -18,17 +18,17 @@ SDL_INCLUDE_DIR := $(SDL_DIR)/include
 SDL_LIB_DIR := $(SDL_DIR)/lib
 
 # compiler
-# CC =
-# CFLAGS =
-# CPPFLAGS =
-# WARNINGS = 
+CC =
+CFLAGS =
+CPPFLAGS =
+WARNINGS = 
 
 # linker
-# LDFLAGS =
-# LIBS =
+LDFLAGS =
+LIBS =
 
 # target arch
-# arch =
+arch =
 
 UNAME := $(shell uname -s)
 # Target OS detection
@@ -159,60 +159,54 @@ else
 	endif
 endif
 
-# Generate a list of corresponding object files
+# Objects and dependencies
 ifeq ($(ENV),win)
 	OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.obj)
+	DEPS := $(OBJS:.obj=.d)	
+	COMPDBS := $(OBJS:.obj=.json)
 else
 	OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+	DEPS := $(OBJS:.o=.d)	
+	COMPDBS := $(OBJS:.obj=.json)
 endif
 
 .PHONY: all
 all: $(BIN_DIR)/$(EXEC)
 
-$(BIN_DIR):
-ifeq ($(ENV),win)
-	if not exist "$(BIN_DIR)" mkdir "$(BIN_DIR)"
-else
-	mkdir -p $(BIN_DIR)
-endif
-
-$(BUILD_DIR):
-ifeq ($(ENV),win)
-	if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
-else
-	mkdir -p $(BUILD_DIR)
-endif
-	
 # Compile source files
 # Move msvc debug info to build
-$(BUILD_DIR)/%.obj: $(SRC_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.obj: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) /c $< /Fo$@
+	if not exist "$(@D)" mkdir "$(@D)"
 	if exist *.pdb move *.pdb $(BUILD_DIR)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 	
 # Link object files
-$(BIN_DIR)/$(EXEC): $(OBJS) | $(BIN_DIR)
+$(BIN_DIR)/$(EXEC): $(OBJS)
 ifeq ($(CC),cl)
-	$(CC) $(OBJS) $(LDFLAGS) $(LIBS) /out:$@
+	if not exist "$(@D)" mkdir "$(@D)"
+	$(CC) $^ $(LDFLAGS) $(LIBS) /out:$@
 else
-	$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+	mkdir -p $(@D)
+	$(CC) $^ $(LDFLAGS) $(LIBS) -o $@
 endif
 
-# Packaged program
-$(INSTALL_DIR):
-ifeq ($(ENV),win)
-	if not exist "$(INSTALL_DIR)" mkdir "$(INSTALL_DIR)"
-else
-	mkdir -p $(INSTALL_DIR)
-endif
+# Include automatically generated dependencies
+-include $(DEPS)
 
 # Packages executable to with dependencies to install directory
 .PHONY: install
 install: all copyassets
 	@echo "Packaging program to $(INSTALL_DIR)"
+ifeq ($(ENV),win)
+	if not exist "$(INSTALL_DIR)" mkdir "$(INSTALL_DIR) 
 	copy "$(BIN_DIR)" "$(INSTALL_DIR)"
+else
+	mkdir -p $(INSTALL_DIR) && cp -r $(BIN_DIR)/. $(INSTALL_DIR)
+endif
 
 # Copies SDL dependencies and roms to the executable's directory
 .PHONY: copyassets
@@ -220,8 +214,10 @@ copyassets:
 ifeq ($(ENV),win)
 	copy "$(SDL_LIB)\*.dll" "$(BIN_DIR)"
 	xcopy /e /y /i roms $(INSTALL_DIR)\roms
-else
+else ifeq ($(ENV),mingw)
 	cp -r $(SDL_LIB)\*.dll $(BIN_DIR)
+	cp -r roms $(BIN_DIR)
+else
 	cp -r roms $(BIN_DIR)
 endif
 
@@ -249,12 +245,12 @@ $(BUILD_DIR_ROOT)/compile_commands.json: $(COMPDBS)
 	@printf "]\n" >> $@
 
 # Generate JSON compilation database fragments from source files
-$(BUILD_DIR)/%.json: $(SRC_DIR)/%.cpp
+$(BUILD_DIR)/%.json: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
 	@printf "\
 	{\n\
 	    \"directory\": \"$(CURDIR)\",\n\
-	    \"command\": \"$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
+	    \"command\": \"$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
 	    \"file\": \"$<\"\n\
 	}\n" > $@
 
