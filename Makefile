@@ -30,6 +30,9 @@ LIBS =
 # target arch
 arch =
 
+# current environment
+ENV =
+
 UNAME := $(shell uname -s)
 # Target OS detection
 ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
@@ -39,10 +42,14 @@ ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
 	arch := $(strip $(shell wmic os get osarchitecture | FINDSTR bit))
 	
 	# Detect environment
-	# TODO: figure out how to do this without using ENV
-	ifneq (,$(findstring MINGW,$(UNAME)))
-		CC = gcc
-		ENV = mingw
+	ifneq (,$(findstring NT,$(UNAME)))
+		# Get current MSYS environment in lowercase
+		ENV := $(strip $(shell echo $$MSYSTEM | tr [:upper:] [:lower:]))
+		ifneq (,$(findstring clang,$(ENV)))
+			CC = clang
+		else
+			CC = gcc
+		endif
 	else
 		ENV = win
 		CC = cl
@@ -103,32 +110,30 @@ else ifeq ($(arch),64)
 endif
 
 
-SDL_LIB := $(SDL_LIB_DIR)/$(OS)/$(CC)/$(arch)
 # OS-specific settings
 ifeq ($(OS),windows)
+	# MSYS and windows settings
 	ifeq ($(ENV),win)
-		# Windows 32- and 64-bit common settings
-		# Required by SDL
 		INCLUDES += /I$(SDL_INCLUDE_DIR)
-		LDFLAGS += /SUBSYSTEM:WINDOWS
+		LDFLAGS += /LIBPATH:$(SDL_LIB_DIR) /SUBSYSTEM:WINDOWS
 		LIBS = SDL2.lib SDL2main.lib shell32.lib
-		LDFLAGS += /LIBPATH:$(SDL_LIB)
 	else
-		LDFLAGS += -mwindows
-		LIBS = -lSDL2 -lmingw32 -lSDL2main 
-		LDFLAGS += -L$(SDL_LIB)
+		INCLUDES += -IC:/msys$(arch)/$(ENV)/include/SDL2
+		LDFLAGS += -LC:/msys$(arch)/$(ENV)/lib
+		LIBS += -lmingw32 -mwindows -lSDL2main -lSDL2 -lpthread		
+		CFLAGS += -Dmain=SDL_main
 	endif
 else ifeq ($(OS),macos)
 	# macOS-specific settings
 	INCLUDES +=
 	LDFLAGS += 
 	LIBS += -lSDL2
-else ifeq ($(OS),linux)
+else
 	# Linux-specific settings
 	INCLUDES += -I/usr/include/SDL2
-	CFLAGS += -D_REENTRANT
 	LDFLAGS += -L/usr/lib
 	LIBS += -lSDL2
+	CFLAGS += -D_REENTRANT
 endif
 
 BUILD_DIR := $(BUILD_DIR_ROOT)/$(OS)
@@ -272,4 +277,4 @@ help:
 	  release=1       Run target using release configuration rather than debug\n\
 	  arch=32/64      Build in 32-bit or 64-bit mode\n\
 	\n\
-	Note: the above options affect the all, install, run, copyassets, compdb, and printvars targets\n"
+	Note: the above options affect the all, install, copyassets, compdb, and printvars targets\n"
