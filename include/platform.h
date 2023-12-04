@@ -3,8 +3,22 @@
 #ifndef PLATFORM_LAYER_H
 #define PLATFORM_LAYER_H
 
-#include <SDL2/SDL.h>
 #include <stdint.h>
+
+/* TODO: fix redundancy */
+#if defined(_WIN32) && !defined(__MINGW64__)
+#define WIN 1
+#include <Windows.h>
+#include <SDL.h>
+#else
+#include <SDL2/SDL.h>
+#include <time.h>
+#endif
+
+// #ifdef __MINGW64__
+// #include <SDL2/SDL.h>
+// #include <time.h>
+// #endif
 
 /* SDL window */
 struct window
@@ -27,4 +41,14 @@ uint8_t platform_get_key_from_keycode(SDL_KeyCode keycode);
 /* Copies data from given buffer to screen */
 void platform_update(struct window *window, uint8_t *display_buffer, uint8_t display_width, uint8_t display_height);
 
-#endif
+/* Timers */
+#ifdef WIN
+void get_current_time(LARGE_INTEGER *time);
+/* elapsed time in microseconds */
+double get_elapsed_time(LARGE_INTEGER start, LARGE_INTEGER end, LARGE_INTEGER frequency);
+#else
+void get_current_time(struct timespec *time);
+double get_elapsed_time(struct timespec start, struct timespec end);
+#endif /* WIN */
+
+#endif /* PLATFORM_LAYER_H */

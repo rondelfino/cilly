@@ -3,35 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <time.h>
-#endif
-
-#ifdef _WIN32
-void get_current_time(LARGE_INTEGER *time)
-{
-    QueryPerformanceCounter(time);
-}
-
-/* elapsed time in microseconds */
-double get_elapsed_time(LARGE_INTEGER start, LARGE_INTEGER end, LARGE_INTEGER frequency)
-{
-    return (double)(end.QuadPart - start.QuadPart) * 1000000.0 / frequency.QuadPart;
-}
-#else
-void get_current_time(struct timespec *time)
-{
-    clock_gettime(CLOCK_MONOTONIC, time);
-}
-
-double get_elapsed_time(struct timepsec start, struct timespec end)
-{
-    return (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000.0;
-}
-#endif
-
 int main(int argc, char **argv)
 {
     struct window window;
@@ -56,7 +27,7 @@ int main(int argc, char **argv)
     chip8_load_rom(&chip8, filename);
 
     /* setup cycle timers */
-#ifdef _WIN32
+#ifdef WIN
     LARGE_INTEGER frequency;
     LARGE_INTEGER current_time, new_time;
     QueryPerformanceFrequency(&frequency);
@@ -76,7 +47,7 @@ int main(int argc, char **argv)
     {
         get_current_time(&new_time);
 
-#ifdef _WIN32
+#ifdef WIN
         dt += get_elapsed_time(current_time, new_time, frequency);
         dt_refresh += get_elapsed_time(current_time, new_time, frequency);
         dt_timer += get_elapsed_time(current_time, new_time, frequency);

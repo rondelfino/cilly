@@ -187,3 +187,25 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint8_t dis
 
     SDL_RenderPresent(window->renderer);
 }
+
+#ifdef WIN
+void get_current_time(LARGE_INTEGER *time)
+{
+    QueryPerformanceCounter(time);
+}
+
+double get_elapsed_time(LARGE_INTEGER start, LARGE_INTEGER end, LARGE_INTEGER frequency)
+{
+    return (double)(end.QuadPart - start.QuadPart) * 1000000.0 / frequency.QuadPart;
+}
+#else
+void get_current_time(struct timespec *time)
+{
+    clock_gettime(CLOCK_MONOTONIC, time);
+}
+
+double get_elapsed_time(struct timespec start, struct timespec end)
+{
+    return (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000.0;
+}
+#endif

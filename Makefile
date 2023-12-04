@@ -1,165 +1,243 @@
 EXEC = cilly
 
-# Build, bin, assets, and install directories (bin and build root directories are kept for clean)
+# dirs
+SRC_DIR = src
+SRCS := $(wildcard $(SRC_DIR)/*.c)
+
+INCLUDE_DIR = include
+
 BUILD_DIR_ROOT = build
 BIN_DIR_ROOT = bin
-INSTALL_DIR := ~/Desktop/$(EXEC)
 
-# Sources (searches recursively inside the source directory)
-SRC_DIR = src
-SRCS := $(sort $(shell find $(SRC_DIR) -name '*.c'))
+EXTERNAL_DIR_ROOT = external
+INSTALL_DIR := $(EXEC)
 
-# Includes
-INCLUDE_DIR = include
-INCLUDES := -I$(INCLUDE_DIR)
+# external
+SDL_DIR := $(EXTERNAL_DIR_ROOT)/SDL2
+SDL_INCLUDE_DIR := $(SDL_DIR)/include
+SDL_LIB_DIR := $(SDL_DIR)/lib
 
-# C preprocessor settings
-CPPFLAGS = $(INCLUDES) -MMD -MP
-
-# C compiler settings
-CC = gcc
-
-# Linker flags
-LDFLAGS =
-
+# compiler
+CC =
 CFLAGS =
-ifeq ($(arch),32)
-	CFLAGS = -m32
-	LDFLAGS = -m32
-endif
+CPPFLAGS =
+WARNINGS = 
 
-WARNINGS = -Wall -Wpedantic -Wextra
+# linker
+LDFLAGS =
+LIBS =
 
-# Libraries to link
-LDLIBS = -lSDL2
+# target arch
+arch =
 
+# current environment
+ENV =
+
+UNAME := $(shell uname -s)
 # Target OS detection
 ifeq ($(OS),Windows_NT) # OS is a preexisting environment variable on Windows
 	OS = windows
+	
+	# Detect target architecture
+	arch := $(strip $(shell wmic os get osarchitecture | FINDSTR bit))
+	
+	# Detect environment
+	ifneq (,$(findstring NT,$(UNAME)))
+		# Get current MSYS environment in lowercase
+		ENV := $(strip $(shell echo $$MSYSTEM | tr [:upper:] [:lower:]))
+		ifneq (,$(findstring clang,$(ENV)))
+			CC = clang
+		else
+			CC = gcc
+		endif
+	else
+		ENV = win
+		CC = cl
+	endif
 else
-	UNAME := $(shell uname -s)
+	arch := $(strip $(shell uname -m | grep 64))
 	ifeq ($(UNAME),Darwin)
 		OS = macos
+		CC = clang
 	else ifeq ($(UNAME),Linux)
 		OS = linux
+		CC = gcc
 	else
     	$(error OS not supported by this Makefile)
 	endif
 endif
 
+# Define shell commands
+ifeq ($(ENV),win)
+	RM = rmdir /s /q
+else
+	RM = rm -rf
+endif
+
+# Set arch
+ifneq (,$(findstring 64,$(arch)))
+	arch = 64
+else
+	arch = 32
+endif
+
+# Set OS-dependent flags
+# List all C source files
+ifeq ($(ENV),win)
+	EXEC := $(EXEC).exe
+	INCLUDES := /I$(INCLUDE_DIR)
+	CPPFLAGS = $(INCLUDES)
+	LDFLAGS = /link
+else
+	WARNINGS = -Wall -Wextra -Wpedantic
+	INCLUDES := -I$(INCLUDE_DIR)
+	CPPFLAGS = $(INCLUDES) -MMD -MP
+endif
+
+# Set target arch compilation
+ifeq ($(arch),32)
+	ifeq ($(ENV),win)
+		LDFLAGS += /MACHINE:x86
+	else
+		LDFLAGS += -m32
+	endif
+else ifeq ($(arch),64)
+	ifeq ($(ENV),win)
+		LDFLAGS += /MACHINE:x64
+	else
+		LDFLAGS += -m64
+	endif
+endif
+
+
 # OS-specific settings
 ifeq ($(OS),windows)
-	# Windows 32- and 64-bit common settings
-	INCLUDES +=
-	LDFLAGS += -mwindows
-	LDLIBS += -lmingw32 -lSDL2main 
-
-	# Checks if windows is 32-bit or 32-bit compilation is set
-	ifeq ($(arch),32)
-		ifeq ($(CC),gcc)
-			INCLUDES +=
-			LDFLAGS += -Llibs/gcc32/
-			LDLIBS +=
-		else ifeq ($(CC),clang)
-			INCLUDES +=
-			LDFLAGS += -Llibs/clang32/
-			LDLIBS +=
-		endif
+	# MSYS and windows settings
+	ifeq ($(ENV),win)
+		INCLUDES += /I$(SDL_INCLUDE_DIR)
+		LDFLAGS += /LIBPATH:$(SDL_LIB_DIR) /SUBSYSTEM:WINDOWS
+		LIBS = SDL2.lib SDL2main.lib shell32.lib
 	else
-		ifeq ($(CC),gcc)
-			INCLUDES +=
-			LDFLAGS += -Llibs/gcc/
-			LDLIBS +=
-		else ifeq ($(CC),clang)
-			INCLUDES +=
-			LDFLAGS += -Llibs/clang/
-			LDLIBS +=
-		endif
+		INCLUDES += -IC:/msys$(arch)/$(ENV)/include/SDL2
+		LDFLAGS += -LC:/msys$(arch)/$(ENV)/lib
+		LIBS += -lmingw32 -mwindows -lSDL2main -lSDL2 -lpthread		
+		CFLAGS += -Dmain=SDL_main
 	endif
-
 else ifeq ($(OS),macos)
 	# macOS-specific settings
 	INCLUDES +=
-	LDFLAGS +=
-	LDLIBS +=
-else ifeq ($(OS),linux)
+	LDFLAGS += 
+	LIBS += -lSDL2
+else
 	# Linux-specific settings
-	INCLUDES +=
-	LDFLAGS +=
-	LDLIBS +=
+	INCLUDES += -I/usr/include/SDL2
+	LDFLAGS += -L/usr/lib
+	LIBS += -lSDL2
+	CFLAGS += -D_REENTRANT
 endif
 
-# OS-specific build, bin, and assets directories
 BUILD_DIR := $(BUILD_DIR_ROOT)/$(OS)
 BIN_DIR := $(BIN_DIR_ROOT)/$(OS)
 ifeq ($(OS),windows)
 	# Windows 32-bit
-	ifeq ($(arch),32)
-		BUILD_DIR := $(BUILD_DIR)$(arch)
-		BIN_DIR := $(BIN_DIR)$(arch)
-	# Windows 64-bit
-	else
-		BUILD_DIR := $(BUILD_DIR)64
-		BIN_DIR := $(BIN_DIR)64
-	endif
+	BUILD_DIR := $(BUILD_DIR)$(arch)
+	BIN_DIR := $(BIN_DIR)$(arch)
 endif
 
 # Debug (default) and release modes settings
 ifeq ($(release),1)
 	BUILD_DIR := $(BUILD_DIR)/release
 	BIN_DIR := $(BIN_DIR)/release
-	CFLAGS += -O3
-	CPPFLAGS += -DNDEBUG
+	ifneq ($(CC),cl)
+		CFLAGS += -O3
+		CPPFLAGS += -DNDEBUG
+	else
+		CFLAGS += /O2
+	endif
 else
 	BUILD_DIR := $(BUILD_DIR)/debug
 	BIN_DIR := $(BIN_DIR)/debug
-	CFLAGS += -O0 -g
+	ifneq ($(CC),cl)
+		CFLAGS += -O0 -g
+	else
+		CFLAGS += /Zi /Od
+	endif
 endif
 
-OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
-DEPS := $(OBJS:.o=.d)
-COMPDBS := $(OBJS:.o=.json)
-
-FILES := $(shell find $(SRC_DIR) $(INCLUDE_DIR) -name '*.c' -o -name '*.h' -o -name '*.hpp' -o -name '*.inl')
-
+# Objects and dependencies
+ifeq ($(ENV),win)
+	OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.obj)
+	DEPS := $(OBJS:.obj=.d)	
+	COMPDBS := $(OBJS:.obj=.json)
+else
+	OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+	DEPS := $(OBJS:.o=.d)	
+	COMPDBS := $(OBJS:.obj=.json)
+endif
 
 .PHONY: all
 all: $(BIN_DIR)/$(EXEC)
 
-# Build executable
-$(BIN_DIR)/$(EXEC): $(OBJS)
-	@echo "Building executable: $@"
-	@mkdir -p $(@D)
-	@$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
 # Compile source files
+# Move msvc debug info to build
+$(BUILD_DIR)/%.obj: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) /c $< /Fo$@
+	if not exist "$(@D)" mkdir "$(@D)"
+	if exist *.pdb move *.pdb $(BUILD_DIR)
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@echo "Compiling: $<"
-	@mkdir -p $(@D)
-	@$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -c $< -o $@
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	
+# Link object files
+$(BIN_DIR)/$(EXEC): $(OBJS)
+ifeq ($(CC),cl)
+	if not exist "$(@D)" mkdir "$(@D)"
+	$(CC) $^ $(LDFLAGS) $(LIBS) /out:$@
+else
+	mkdir -p $(@D)
+	$(CC) $^ $(LDFLAGS) $(LIBS) -o $@
+endif
 
 # Include automatically generated dependencies
 -include $(DEPS)
 
-# Install packaged program
+# Packages executable to with dependencies to install directory
 .PHONY: install
-install: all
-	@echo "Installing $(EXEC) to $(INSTALL_DIR)"
-	@mkdir -p $(INSTALL_DIR) && cp -r $(BIN_DIR)/. $(INSTALL_DIR)
+install: all copyassets
+	@echo "Packaging program to $(INSTALL_DIR)"
+ifeq ($(ENV),win)
+	if not exist "$(INSTALL_DIR)" mkdir "$(INSTALL_DIR) 
+	copy "$(BIN_DIR)" "$(INSTALL_DIR)"
+else
+	mkdir -p $(INSTALL_DIR) && cp -r $(BIN_DIR)/. $(INSTALL_DIR)
+endif
 
-# Build and run
-.PHONY: run
-run: all
-	@echo "Starting program: $(BIN_DIR)/$(EXEC)"
-	@cd $(BIN_DIR) && ./$(EXEC)
+# Copies SDL dependencies and roms to the executable's directory
+.PHONY: copyassets
+copyassets:
+ifeq ($(ENV),win)
+	copy "$(SDL_LIB)\*.dll" "$(BIN_DIR)"
+	xcopy /e /y /i roms $(INSTALL_DIR)\roms
+else ifeq ($(ENV),mingw)
+	cp -r $(SDL_LIB)/*.dll $(BIN_DIR)
+	cp -r roms $(BIN_DIR)
+else
+	cp -r roms $(BIN_DIR)
+endif
 
-# Clean build and bin directories for all platforms
 .PHONY: clean
 clean:
-	@echo "Cleaning $(BUILD_DIR_ROOT) and $(BIN_DIR_ROOT) directories"
-	@$(RM) -r $(BUILD_DIR_ROOT)
-	@$(RM) -r $(BIN_DIR_ROOT)
+ifeq ($(ENV),win)
+	if exist $(BUILD_DIR_ROOT) $(RM) $(BUILD_DIR_ROOT)
+	if exist $(BIN_DIR_ROOT) $(RM) $(BIN_DIR_ROOT)
+	if exist *.pdb del *.pdb
+else
+	$(RM) $(BUILD_DIR_ROOT)
+	$(RM) $(BIN_DIR_ROOT)
+endif
 
+# TODO: support cmd/powershell
 .PHONY: compdb
 compdb: $(BUILD_DIR_ROOT)/compile_commands.json
 
@@ -181,8 +259,7 @@ $(BUILD_DIR)/%.json: $(SRC_DIR)/%.c
 	    \"file\": \"$<\"\n\
 	}\n" > $@
 
-
-# Print help information
+# TODO: support cmd/powershell
 .PHONY: help
 help:
 	@printf "\
@@ -191,13 +268,13 @@ help:
 	Targets:\n\
 	  all             Build executable (debug mode by default) (default target)\n\
 	  install         Install packaged program to desktop (debug mode by default)\n\
-	  run             Build and run executable (debug mode by default)\n\
+	  copyassets      Copy assets to executable directory for selected platform and configuration\n\
 	  clean           Clean build and bin directories (all platforms)\n\
 	  compdb          Generate JSON compilation database (compile_commands.json)\n\
-	  help            Display help information\n\
+	  help            Print this information\n\
 	\n\
 	Options:\n\
 	  release=1       Run target using release configuration rather than debug\n\
-	  arch=32         Build in 32-bit mode\n\
+	  arch=32/64      Build in 32-bit or 64-bit mode\n\
 	\n\
-	"
+	Note: the above options affect the all, install, copyassets, compdb, and printvars targets\n"
