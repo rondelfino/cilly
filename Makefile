@@ -215,7 +215,7 @@ ifeq ($(ENV),win)
 	copy "$(SDL_LIB)\*.dll" "$(BIN_DIR)"
 	xcopy /e /y /i roms $(INSTALL_DIR)\roms
 else ifeq ($(ENV),mingw)
-	cp -r $(SDL_LIB)\*.dll $(BIN_DIR)
+	cp -r $(SDL_LIB)/*.dll $(BIN_DIR)
 	cp -r roms $(BIN_DIR)
 else
 	cp -r roms $(BIN_DIR)
