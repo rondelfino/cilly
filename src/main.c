@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     chip8_load_rom(&chip8, filename);
 
     /* setup cycle timers */
-#ifdef _WIN32
+#ifdef WIN
     LARGE_INTEGER frequency;
     LARGE_INTEGER current_time, new_time;
     QueryPerformanceFrequency(&frequency);
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     {
         get_current_time(&new_time);
 
-#ifdef _WIN32
+#ifdef WIN
         dt += get_elapsed_time(current_time, new_time, frequency);
         dt_refresh += get_elapsed_time(current_time, new_time, frequency);
         dt_timer += get_elapsed_time(current_time, new_time, frequency);

@@ -188,7 +188,7 @@ void platform_update(struct window *window, uint8_t *display_buffer, uint8_t dis
     SDL_RenderPresent(window->renderer);
 }
 
-#ifdef _WIN32
+#ifdef WIN
 void get_current_time(LARGE_INTEGER *time)
 {
     QueryPerformanceCounter(time);
