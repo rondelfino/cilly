@@ -2,13 +2,20 @@ EXEC = cilly
 
 # dirs
 SRC_DIR = src
-BUILD_DIR_ROOT = build
-BIN_DIR_ROOT = bin
-EXTERNAL_DIR_ROOT = external
-INSTALL_DIR = .
+SRCS := $(wildcard $(SRC_DIR)/*.c)
 
 INCLUDE_DIR = include
-INCLUDES := $(INCLUDE_DIR)
+
+BUILD_DIR_ROOT = build
+BIN_DIR_ROOT = bin
+
+EXTERNAL_DIR_ROOT = external
+INSTALL_DIR := $(EXEC)
+
+# external
+SDL_DIR := $(EXTERNAL_DIR_ROOT)/SDL2
+SDL_INCLUDE_DIR := $(SDL_DIR)/include
+SDL_LIB_DIR := $(SDL_DIR)/lib
 
 # compiler
 # CC =
@@ -71,13 +78,13 @@ endif
 # List all C source files
 ifeq ($(ENV),win)
 	EXEC := $(EXEC).exe
-	SRCS := $(wildcard $(SRC_DIR)/*.c)
-	CPPFLAGS = /I$(INCLUDES)
+	INCLUDES := /I$(INCLUDE_DIR)
+	CPPFLAGS = $(INCLUDES)
 	LDFLAGS = /link
 else
-	SRCS := $(sort $(shell find $(SRC_DIR) -name '*.c'))
 	WARNINGS = -Wall -Wextra -Wpedantic
-	CPPFLAGS = -I$(INCLUDES)
+	INCLUDES := -I$(INCLUDE_DIR)
+	CPPFLAGS = $(INCLUDES) -MMD -MP
 endif
 
 # Set target arch compilation
@@ -95,45 +102,22 @@ else ifeq ($(arch),64)
 	endif
 endif
 
+
+SDL_LIB := $(SDL_LIB_DIR)/$(OS)/$(CC)/$(arch)
 # OS-specific settings
 ifeq ($(OS),windows)
 	ifeq ($(ENV),win)
 		# Windows 32- and 64-bit common settings
 		# Required by SDL
+		INCLUDES += /I$(SDL_INCLUDE_DIR)
 		LDFLAGS += /SUBSYSTEM:WINDOWS
 		LIBS = SDL2.lib SDL2main.lib shell32.lib
+		LDFLAGS += /LIBPATH:$(SDL_LIB)
 	else
 		LDFLAGS += -mwindows
 		LIBS = -lSDL2 -lmingw32 -lSDL2main 
+		LDFLAGS += -L$(SDL_LIB)
 	endif
-		
-	# Target architecture settings
-	ifeq ($(arch),32)
-		ifeq ($(CC),gcc)
-			INCLUDES +=
-			LDFLAGS += -Lexternal/SDL2/gcc/x86
-			LIBS +=
-		else ifeq ($(CC),clang)
-			INCLUDES +=
-			LDFLAGS += -Lexternal/SDL2/clang/x86
-			LIBS +=
-		else
-			LDFLAGS += /LIBPATH:external\SDL2\cl\x86
-		endif
-	else
-		ifeq ($(CC),gcc)
-			INCLUDES +=
-			LDFLAGS += -Lexternal/SDL2/gcc/x64
-			LIBS +=
-		else ifeq ($(CC),clang)
-			INCLUDES +=
-			LDFLAGS += -Lexternal/SDL2/gcc/x32
-			LIBS +=
-		else
-			LDFLAGS += /LIBPATH:external\SDL2\cl\x64		
-		endif
-	endif
-
 else ifeq ($(OS),macos)
 	# macOS-specific settings
 	INCLUDES +=
@@ -151,14 +135,8 @@ BUILD_DIR := $(BUILD_DIR_ROOT)/$(OS)
 BIN_DIR := $(BIN_DIR_ROOT)/$(OS)
 ifeq ($(OS),windows)
 	# Windows 32-bit
-	ifeq ($(arch),32)
-		BUILD_DIR := $(BUILD_DIR)$(arch)
-		BIN_DIR := $(BIN_DIR)$(arch)
-	# Windows 64-bit
-	else
-		BUILD_DIR := $(BUILD_DIR)64
-		BIN_DIR := $(BIN_DIR)64
-	endif
+	BUILD_DIR := $(BUILD_DIR)$(arch)
+	BIN_DIR := $(BIN_DIR)$(arch)
 endif
 
 # Debug (default) and release modes settings
@@ -177,7 +155,7 @@ else
 	ifneq ($(CC),cl)
 		CFLAGS += -O0 -g
 	else
-		CFLAGS += /Zi
+		CFLAGS += /Zi /Od
 	endif
 endif
 
@@ -206,8 +184,10 @@ else
 endif
 	
 # Compile source files
+# Move msvc debug info to build
 $(BUILD_DIR)/%.obj: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) /c $< /Fo$@
+	if exist *.pdb move *.pdb $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
@@ -228,24 +208,72 @@ else
 	mkdir -p $(INSTALL_DIR)
 endif
 
+# Packages executable to with dependencies to install directory
 .PHONY: install
-install: all copyextdeps | $(INSTALL_DIR)
+install: all copyassets
 	@echo "Packaging program to $(INSTALL_DIR)"
+	copy "$(BIN_DIR)" "$(INSTALL_DIR)"
 
-# Copies external dependencies to the executable's directory
-.PHONY: copyextdeps
-copyextdeps:
+# Copies SDL dependencies and roms to the executable's directory
+.PHONY: copyassets
+copyassets:
 ifeq ($(ENV),win)
-	cp /s /q $(EXTERNAL_ROOT_DIR)/$(OS)/$(CC)/$(arch)/*.dll $(BIN_DIR)/
+	copy "$(SDL_LIB)\*.dll" "$(BIN_DIR)"
+	xcopy /e /y /i roms $(INSTALL_DIR)\roms
+else
+	cp -r $(SDL_LIB)\*.dll $(BIN_DIR)
+	cp -r roms $(BIN_DIR)
 endif
-	
 
 .PHONY: clean
 clean:
 ifeq ($(ENV),win)
 	if exist $(BUILD_DIR_ROOT) $(RM) $(BUILD_DIR_ROOT)
 	if exist $(BIN_DIR_ROOT) $(RM) $(BIN_DIR_ROOT)
+	if exist *.pdb del *.pdb
 else
 	$(RM) $(BUILD_DIR_ROOT)
 	$(RM) $(BIN_DIR_ROOT)
 endif
+
+# TODO: support cmd/powershell
+.PHONY: compdb
+compdb: $(BUILD_DIR_ROOT)/compile_commands.json
+
+# Generate JSON compilation database (compile_commands.json) by merging fragments
+$(BUILD_DIR_ROOT)/compile_commands.json: $(COMPDBS)
+	@echo "Generating: $@"
+	@mkdir -p $(@D)
+	@printf "[\n" > $@
+	@sed -e '$$s/$$/,/' -s $(COMPDBS) | sed -e '$$s/,$$//' -e 's/^/    /' >> $@
+	@printf "]\n" >> $@
+
+# Generate JSON compilation database fragments from source files
+$(BUILD_DIR)/%.json: $(SRC_DIR)/%.cpp
+	@mkdir -p $(@D)
+	@printf "\
+	{\n\
+	    \"directory\": \"$(CURDIR)\",\n\
+	    \"command\": \"$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(WARNINGS) -c $< -o $(basename $@).o\",\n\
+	    \"file\": \"$<\"\n\
+	}\n" > $@
+
+# TODO: support cmd/powershell
+.PHONY: help
+help:
+	@printf "\
+	Usage: make target... [options]...\n\
+	\n\
+	Targets:\n\
+	  all             Build executable (debug mode by default) (default target)\n\
+	  install         Install packaged program to desktop (debug mode by default)\n\
+	  copyassets      Copy assets to executable directory for selected platform and configuration\n\
+	  clean           Clean build and bin directories (all platforms)\n\
+	  compdb          Generate JSON compilation database (compile_commands.json)\n\
+	  help            Print this information\n\
+	\n\
+	Options:\n\
+	  release=1       Run target using release configuration rather than debug\n\
+	  arch=32/64      Build in 32-bit or 64-bit mode\n\
+	\n\
+	Note: the above options affect the all, install, run, copyassets, compdb, and printvars targets\n"
